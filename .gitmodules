@@ -1,0 +1,3 @@
+[submodule "dep/GSW-Fortran"]
+	path = dep/GSW-Fortran
+	url = https://github.com/TEOS-10/GSW-Fortran.git

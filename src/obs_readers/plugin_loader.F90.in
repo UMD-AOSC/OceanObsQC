@@ -1,0 +1,14 @@
+MODULE obs_reader_plugins
+   USE obs_reader_mod
+   ${PLUGIN_MODS}
+
+CONTAINS
+
+  SUBROUTINE register_obs_reader_plugins()
+    CLASS(obs_reader), POINTER :: ptr
+
+    ${PLUGIN_ALLOCS}
+
+  END SUBROUTINE register_obs_reader_plugins
+
+END MODULE obs_reader_plugins

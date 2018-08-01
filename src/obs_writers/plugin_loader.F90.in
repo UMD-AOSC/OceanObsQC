@@ -1,0 +1,14 @@
+MODULE obs_writer_plugins
+   USE obs_writer_mod
+   ${PLUGIN_MODS}
+
+CONTAINS
+
+  SUBROUTINE register_obs_writer_plugins()
+    CLASS(obs_writer), POINTER :: ptr
+
+    ${PLUGIN_ALLOCS}
+
+  END SUBROUTINE register_obs_writer_plugins
+
+END MODULE obs_writer_plugins

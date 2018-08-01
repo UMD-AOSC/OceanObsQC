@@ -1,0 +1,14 @@
+MODULE qc_step_plugins
+   USE qc_step_mod
+   ${PLUGIN_MODS}
+
+CONTAINS
+
+  SUBROUTINE register_qc_step_plugins()
+    CLASS(qc_step), POINTER :: ptr
+
+    ${PLUGIN_ALLOCS}
+
+  END SUBROUTINE register_qc_step_plugins
+
+END MODULE qc_step_plugins
