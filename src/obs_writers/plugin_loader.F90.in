@@ -1,14 +1,25 @@
 MODULE obs_writer_plugins
    USE obs_writer_mod
+   USE vec_obs_writer_mod
    ${PLUGIN_MODS}
+
+   IMPLICIT NONE
+   PRIVATE
+
+   PUBLIC :: register_obs_writer_plugins
+   TYPE(vec_obs_writer), PUBLIC :: obs_writers
+
 
 CONTAINS
 
+
   SUBROUTINE register_obs_writer_plugins()
+    type(obs_writer_ptr) :: wrapper
     CLASS(obs_writer), POINTER :: ptr
 
     ${PLUGIN_ALLOCS}
 
   END SUBROUTINE register_obs_writer_plugins
+
 
 END MODULE obs_writer_plugins

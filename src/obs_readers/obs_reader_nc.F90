@@ -1,7 +1,7 @@
 MODULE obs_reader_nc_mod
   USE obs_reader_mod
   USE profile_mod
-  USE ftlDynArrayProfileModule
+  USE vec_profile_mod
 
   IMPLICIT NONE
   PRIVATE
@@ -38,8 +38,8 @@ CONTAINS
   !-----------------------------------------------------------------------------
   SUBROUTINE reader_nc_read(self, obs)
     CLASS(obs_reader_nc) :: self
-    TYPE(ftlDynArrayProfile), INTENT(inout) :: obs
-    
+    TYPE(vec_profile), INTENT(inout) :: obs
+
     PRINT *, "NetCDF reader not yet implemented"
     STOP 1
   END SUBROUTINE reader_nc_read

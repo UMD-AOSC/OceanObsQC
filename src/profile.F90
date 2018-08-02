@@ -1,8 +1,10 @@
+!===============================================================================
+!>
+!-------------------------------------------------------------------------------
 MODULE profile_mod
-  
+
   IMPLICIT NONE
   PRIVATE
-
 
   TYPE, PUBLIC :: profile
      REAL(8) :: lat
@@ -12,14 +14,20 @@ MODULE profile_mod
      REAL, ALLOCATABLE :: salt(:)
      REAL, ALLOCATABLE :: temp(:)
   END TYPE profile
-  
+
 END MODULE profile_mod
+!===============================================================================
 
 
-! Define a dynamic array "ftlDynArrayProfile" that holds objects of type "Profile"
-#define FTL_TEMPLATE_TYPE profile
-#define FTL_TEMPLATE_TYPE_IS_DERIVED
-#define FTL_TEMPLATE_TYPE_NAME Profile
-#define FTL_TEMPLATE_TYPE_MODULE profile_mod
-#define FTL_INSTANTIATE_TEMPLATE
-#include "ftlDynArray.F90_template"
+
+
+!===============================================================================
+!>
+!-------------------------------------------------------------------------------
+MODULE vec_profile_mod
+  USE profile_mod
+#define _type type(profile)
+#define _vector vec_profile
+#include "templates/vector.inc"
+END MODULE vec_profile_mod
+!===============================================================================

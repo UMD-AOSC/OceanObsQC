@@ -1,16 +1,14 @@
 MODULE obs_reader_mod
   USE profile_mod
-  use ftlDynArrayProfileModule
+  USE vec_profile_mod
 
   IMPLICIT NONE
   PRIVATE
 
-  PUBLIC :: obs_reader_register
-  PUBLIC :: obs_reader_init
-
 
   !=============================================================================
-  !>
+  !> Abstract class from which all observation readers are based.
+  !> Each class derrived from this must have a unique "name"
   !-----------------------------------------------------------------------------
   TYPE, PUBLIC, ABSTRACT:: obs_reader
    CONTAINS
@@ -24,84 +22,36 @@ MODULE obs_reader_mod
      END FUNCTION I_reader_getstr
 
      SUBROUTINE I_reader_read(self, obs)
-       IMPORT obs_reader, ftlDynArrayProfile
+       IMPORT obs_reader, vec_profile
        CLASS(obs_reader) :: self
-       TYPE(ftlDynArrayProfile), INTENT(inout) :: obs
+       TYPE(vec_profile), INTENT(inout) :: obs
      END SUBROUTINE I_reader_read
   END INTERFACE
   !=============================================================================
 
 
-
   !=============================================================================
-  !>
+  !> Simple wrapper for the obs_reader type so that it can be placed
+  !> in a vector object
   !-----------------------------------------------------------------------------
   TYPE, PUBLIC :: obs_reader_ptr
      CLASS(obs_reader), POINTER :: p
   END TYPE obs_reader_ptr
   !=============================================================================
 
-
-  ! private variables to handle registration of reader plugins
-  !-----------------------------------------------------------------------------
-  INTEGER, PARAMETER   :: plugin_reg_max = 100
-  INTEGER              :: plugin_reg_num = 0
-  TYPE(obs_reader_ptr) :: plugin_reg(plugin_reg_max)
-
-!  type(ftlDynArrayobs_reader_ptr) :: foo
-
-CONTAINS
-
-
-  !=============================================================================
-  !>
-  !-----------------------------------------------------------------------------
-  SUBROUTINE obs_reader_register(plugin)
-    CLASS(obs_reader), POINTER :: plugin
-    INTEGER :: i
-
-    ! make sure we haven't reached our max number of plugins
-    IF (plugin_reg_num == plugin_reg_max) THEN
-       PRINT *, "ERROR: too many obs_reader plugins registered."
-       STOP 1
-    END IF
-
-    ! make sure a plugin of this name hasn't already been registered
-    !  do i=1,
-
-    ! add the plugin to the list
-    plugin_reg_num = plugin_reg_num + 1
-    plugin_reg(plugin_reg_num)%p => plugin
-
-    PRINT *, "* ", plugin%name()
-  END SUBROUTINE obs_reader_register
-  !=============================================================================
-
-
-  SUBROUTINE obs_reader_init(obs)
-    TYPE(ftlDynArrayProfile), intent(out) :: obs
-    integer :: i
-
-    
-    PRINT *, plugin_reg(1)%p%name()
-    
-    call obs%new()
-
-    ! read in profiles from the desired plugin
-    ! TODO, specify plugin with namelist
-    CALL plugin_reg(1)%p%obs_read(obs)
-
-    
-    print *, "Total obs loaded: ", obs%size()
-
-  END SUBROUTINE obs_reader_init
-
 END MODULE obs_reader_mod
+!===============================================================================
 
 
-! #define FTL_TEMPLATE_TYPE obs_reader_ptr
-! #define FTL_TEMPLATE_TYPE_IS_DERIVED
-! #define FTL_TEMPLATE_TYPE_NAME obsReaderPtr
-! #define FTL_TEMPLATE_TYPE_MODULE obs_reader_mod
-! #define FTL_INSTANTIATE_TEMPLATE
-! #include "ftlDynArray.F90_template"
+
+
+!===============================================================================
+!> Templated vector object for holding obs_reader_ptr types
+!-------------------------------------------------------------------------------
+MODULE vec_obs_reader_mod
+  USE obs_reader_mod
+#define _type type(obs_reader_ptr)
+#define _vector vec_obs_reader
+#include "templates/vector.inc"
+END MODULE vec_obs_reader_mod
+!===============================================================================

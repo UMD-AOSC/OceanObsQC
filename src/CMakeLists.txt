@@ -1,7 +1,8 @@
+# find the NCEP BUFRLIB
 find_package(Bufr REQUIRED)
 
 # include the "fortran template library"
-include_directories(${FTL_INCLUDE})
+include_directories(${GFTL_INCLUDE})
 
 # core source files and exectubable creation
 set(obsqc_srcs

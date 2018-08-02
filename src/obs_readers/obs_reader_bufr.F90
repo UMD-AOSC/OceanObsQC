@@ -1,8 +1,8 @@
 MODULE obs_reader_bufr_mod
   USE obs_reader_mod
   USE profile_mod
-  use ftlDynArrayProfileModule
-  
+  USE vec_profile_mod
+
   IMPLICIT NONE
   PRIVATE
 
@@ -36,7 +36,7 @@ CONTAINS
   !-----------------------------------------------------------------------------
   SUBROUTINE bufr_read(self, obs)
     CLASS(obs_reader_bufr) :: self
-    TYPE(ftlDynArrayProfile), INTENT(inout) :: obs
+    TYPE(vec_profile), INTENT(inout) :: obs
 
     LOGICAL :: valid
     TYPE(profile) :: ob, ob2
@@ -71,14 +71,14 @@ CONTAINS
           ELSE
              PRINT *, "WARN: unknown ob type: ", c1
           END IF
-!          PRINT *, ob%lat, ob%lon
-          call obs%pushback(ob)
-          
+          !          PRINT *, ob%lat, ob%lon
+          CALL obs%push_back(ob)
+
           IF(valid) cnt = cnt + 1
        END DO
     END DO
 
-!    PRINT *, "Found ",cnt,"profiles"
+    !    PRINT *, "Found ",cnt,"profiles"
     ! all done cleanup
     CALL closbf(file)
     CLOSE(file)

@@ -1,7 +1,7 @@
 MODULE obs_writer_nc_mod
   USE obs_writer_mod
-  use profile_mod
-  use ftlDynArrayProfileModule
+  USE profile_mod
+  USE vec_profile_mod
 
   IMPLICIT NONE
   PRIVATE
@@ -30,7 +30,7 @@ CONTAINS
   FUNCTION writer_nc_get_name() RESULT(name)
     CHARACTER(:), ALLOCATABLE :: name
     name = "NC"
-  END FUNCTION writer_nc_get_name 
+  END FUNCTION writer_nc_get_name
   !=============================================================================
 
 
@@ -38,9 +38,9 @@ CONTAINS
   !>
   !-----------------------------------------------------------------------------
   SUBROUTINE writer_nc_write(self, obs)
-    CLASS(obs_writer_nc), intent(inout) :: self
-    TYPE(ftlDynArrayProfile), intent(in) :: obs
-    
+    CLASS(obs_writer_nc), INTENT(inout) :: self
+    TYPE(vec_profile), INTENT(in) :: obs
+
   END SUBROUTINE writer_nc_write
   !=============================================================================
 

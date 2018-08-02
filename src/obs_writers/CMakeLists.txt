@@ -28,7 +28,8 @@ foreach(p ${PLUGINS})
     "USE ${p}_mod\n")
   STRING(CONCAT PLUGIN_ALLOCS ${PLUGIN_ALLOCS}
     "ALLOCATE(${p}::ptr)\n"
-    "CALL obs_writer_register(ptr)\n" )
+    "wrapper%p=>ptr\n"
+    "CALL obs_writers%push_back(wrapper)\n" )
 endforeach()
 
 # generate the source file, and add it to the build

@@ -1,7 +1,7 @@
 MODULE obs_reader_wod_mod
   USE obs_reader_mod
   USE profile_mod
-  use ftlDynArrayProfileModule
+  USE vec_profile_mod
 
   IMPLICIT NONE
   PRIVATE
@@ -36,7 +36,7 @@ CONTAINS
   !-----------------------------------------------------------------------------
   SUBROUTINE wod_read(self, obs)
     CLASS(obs_reader_wod) :: self
-    TYPE(ftlDynArrayProfile), INTENT(inout) :: obs
+    TYPE(vec_profile), INTENT(inout) :: obs
 
     PRINT *, "WOD reader not yet implemented"
     STOP 1

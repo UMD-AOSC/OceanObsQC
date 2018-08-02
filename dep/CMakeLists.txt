@@ -1,6 +1,6 @@
 # "fortran template library"
-add_subdirectory(ftl)
-set(FTL_INCLUDE ${FTL_INCLUDE} PARENT_SCOPE)
+add_subdirectory(gFTL)
+set(GFTL_INCLUDE ${CMAKE_CURRENT_BINARY_DIR}/gFTL/include;${CMAKE_CURRENT_LIST_DIR}/gFTL/include PARENT_SCOPE)
 
 # Gibbs Seawater
 include(GSW-Fortran.cmake)
