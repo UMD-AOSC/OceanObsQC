@@ -5,7 +5,7 @@
 #   3) class  name is "plugin"
 #-------------------------------------------------------------------------------
 set(PLUGINS
-  qc_1
+  QCTEMPLATE
   )
 
 
@@ -13,6 +13,7 @@ set(PLUGINS
 
 #-------------------------------------------------------------------------------
 # Don't edit below here.
+#-------------------------------------------------------------------------------
 # This automatically generates a source code file "PLUGIN_LOADER_FILE" that will
 # be added to the build with the purpose of registering each plugin with the
 # main program.
@@ -27,9 +28,10 @@ foreach(p ${PLUGINS})
   target_sources(obsqc PRIVATE ${CMAKE_CURRENT_LIST_DIR}/${p}.F90)
   STRING(CONCAT PLUGIN_MODS ${PLUGIN_MODS}
     "USE ${p}_mod\n")
-#  STRING(CONCAT PLUGIN_ALLOCS ${PLUGIN_ALLOCS}
-    #"ALLOCATE(${p}::ptr)\n"
-    #"CALL qc_step_register(ptr)\n" )
+  STRING(CONCAT PLUGIN_ALLOCS ${PLUGIN_ALLOCS}
+    "ALLOCATE(${p}::ptr)\n"
+    "wrapper%p=>ptr\n"
+    "CALL qc_steps%push_back(wrapper)\n" )
 endforeach()
 
 # generate the source file, and add it to the build

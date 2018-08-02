@@ -1,14 +1,25 @@
 MODULE qc_step_plugins
    USE qc_step_mod
+   USE vec_qc_step_mod
    ${PLUGIN_MODS}
+
+   IMPLICIT NONE
+   PRIVATE
+
+   PUBLIC :: register_qc_step_plugins
+   TYPE(vec_qc_step), PUBLIC :: qc_steps
+
 
 CONTAINS
 
+
   SUBROUTINE register_qc_step_plugins()
+    TYPE(qc_step_ptr) :: wrapper
     CLASS(qc_step), POINTER :: ptr
 
     ${PLUGIN_ALLOCS}
 
   END SUBROUTINE register_qc_step_plugins
+
 
 END MODULE qc_step_plugins

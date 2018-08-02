@@ -15,6 +15,7 @@ set(PLUGINS
 
 #-------------------------------------------------------------------------------
 # Don't edit below here.
+#-------------------------------------------------------------------------------
 # This automatically generates a source code file "PLUGIN_LOADER_FILE" that will
 # be added to the build with the purpose of registering each plugin with the
 # main program.

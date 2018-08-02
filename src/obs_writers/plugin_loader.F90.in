@@ -14,7 +14,7 @@ CONTAINS
 
 
   SUBROUTINE register_obs_writer_plugins()
-    type(obs_writer_ptr) :: wrapper
+    TYPE(obs_writer_ptr) :: wrapper
     CLASS(obs_writer), POINTER :: ptr
 
     ${PLUGIN_ALLOCS}
