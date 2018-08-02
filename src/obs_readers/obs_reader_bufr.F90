@@ -1,7 +1,8 @@
 MODULE obs_reader_bufr_mod
   USE obs_reader_mod
   USE profile_mod
-
+  use ftlDynArrayProfileModule
+  
   IMPLICIT NONE
   PRIVATE
 
@@ -35,17 +36,19 @@ CONTAINS
   !-----------------------------------------------------------------------------
   SUBROUTINE bufr_read(self, obs)
     CLASS(obs_reader_bufr) :: self
-    TYPE(profile), ALLOCATABLE, INTENT(out) :: obs(:)
+    TYPE(ftlDynArrayProfile), INTENT(inout) :: obs
 
     LOGICAL :: valid
-    TYPE(profile) :: ob
+    TYPE(profile) :: ob, ob2
     INTEGER :: file, idate, iret
     CHARACTER*8 c1
 
+    TYPE(profile), ALLOCATABLE :: prf(:)
     INTEGER ::cnt
+
     !open file
     file=90
-    OPEN(unit=file, file='xx005')
+    OPEN(unit=file, file='xx001')
     CALL openbf(file,'IN',file)
     CALL datelen(10)
 
@@ -68,11 +71,14 @@ CONTAINS
           ELSE
              PRINT *, "WARN: unknown ob type: ", c1
           END IF
+!          PRINT *, ob%lat, ob%lon
+          call obs%pushback(ob)
+          
           IF(valid) cnt = cnt + 1
        END DO
     END DO
 
-    PRINT *, "Found ",cnt,"profiles"
+!    PRINT *, "Found ",cnt,"profiles"
     ! all done cleanup
     CALL closbf(file)
     CLOSE(file)
@@ -96,8 +102,8 @@ CONTAINS
     CHARACTER str*(8), str2*(8)
     EQUIVALENCE (r8, str)
 
-    PRINT *, ""
-    ! datetime
+    valid = .FALSE.
+
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'YYMMDD')
     !    PRINT *, 'YYMMDD ', r8(1:3,1)
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'HHMM')
@@ -105,12 +111,21 @@ CONTAINS
     CALL ufbint(file, r8, MXMN, MXLV, nlv, 'RPID')
     !PRINT *, "RPID ", nlv, str
     CALL ufbseq(file, r8, MXMN, MXLV, nlv, 'LTLONH')
-    !PRINT *, "LTLONH ", r8(1:2,1)
+    ob%lat = r8(1,1)
+    ob%lon = r8(2,1)
 
     CALL ufbrep(file, r8, MXMN, MXLV, nlv, 'DBSS STMP SALN')
-    !DO i = 1, nlv
-    !PRINT *, "     ", i,r8(1:3,i)
-    !END DO
+    IF(nlv==0) THEN
+       PRINT *, "ERROR: no levels found"
+       RETURN
+    END  IF
+
+    ALLOCATE(ob%depth(nlv))
+    ALLOCATE(ob%temp(nlv))
+    ALLOCATE(ob%salt(nlv))
+    ob%depth = r8(1,1:nlv)
+    ob%temp  = r8(2,1:nlv)
+    ob%salt  = r8(3,1:nlv)
 
     valid = .TRUE.
   END SUBROUTINE process_bathytesac

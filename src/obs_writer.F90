@@ -1,4 +1,7 @@
 MODULE obs_writer_mod
+  use profile_mod
+  use ftlDynArrayProfileModule
+  
   IMPLICIT NONE
   PRIVATE
 
@@ -10,13 +13,21 @@ MODULE obs_writer_mod
   !-----------------------------------------------------------------------------
   TYPE, PUBLIC, ABSTRACT:: obs_writer
    CONTAINS
-     PROCEDURE(I_obs_writer_getstr), NOPASS, DEFERRED :: name
+     PROCEDURE(I_writer_getstr), NOPASS, DEFERRED :: name
+     PROCEDURE(I_writer_write),          DEFERRED :: obs_write
   END TYPE obs_writer
 
   ABSTRACT INTERFACE
-     FUNCTION I_obs_writer_getstr()
-       CHARACTER(:), ALLOCATABLE :: I_obs_writer_getstr
-     END FUNCTION I_obs_writer_getstr
+     FUNCTION I_writer_getstr()
+       CHARACTER(:), ALLOCATABLE :: I_writer_getstr       
+     END FUNCTION I_writer_getstr
+
+     SUBROUTINE I_writer_write(self, obs)
+       IMPORT obs_writer, ftlDynArrayProfile
+       CLASS(obs_writer), intent(inout) :: self
+       TYPE(ftlDynArrayProfile), INTENT(in) :: obs
+     END SUBROUTINE I_writer_write
+     
   END INTERFACE
   !=============================================================================
 

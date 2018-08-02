@@ -1,9 +1,12 @@
 PROGRAM obsqc
   USE obs_reader_plugins
   USE obs_writer_plugins
+  use ftlDynArrayProfileModule
 
   IMPLICIT NONE
 
+  type(ftlDynArrayProfile) :: obs
+  
   PRINT *, "Ocean Observation Qualtiy Control"
   PRINT *, ""
   PRINT *, "Available obs reader plugins:"
@@ -15,6 +18,6 @@ PROGRAM obsqc
 
   PRINT *, ""
   PRINT *, "Reading profiles"
-  CALL obs_reader_init()
+  CALL obs_reader_init(obs)
 
 END PROGRAM obsqc

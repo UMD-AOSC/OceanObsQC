@@ -1,5 +1,6 @@
 MODULE obs_reader_mod
   USE profile_mod
+  use ftlDynArrayProfileModule
 
   IMPLICIT NONE
   PRIVATE
@@ -23,9 +24,9 @@ MODULE obs_reader_mod
      END FUNCTION I_reader_getstr
 
      SUBROUTINE I_reader_read(self, obs)
-       IMPORT obs_reader, profile
+       IMPORT obs_reader, ftlDynArrayProfile
        CLASS(obs_reader) :: self
-       TYPE(profile), ALLOCATABLE, INTENT(out) :: obs(:)
+       TYPE(ftlDynArrayProfile), INTENT(inout) :: obs
      END SUBROUTINE I_reader_read
   END INTERFACE
   !=============================================================================
@@ -35,7 +36,7 @@ MODULE obs_reader_mod
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
-  TYPE :: obs_reader_ptr
+  TYPE, PUBLIC :: obs_reader_ptr
      CLASS(obs_reader), POINTER :: p
   END TYPE obs_reader_ptr
   !=============================================================================
@@ -47,7 +48,7 @@ MODULE obs_reader_mod
   INTEGER              :: plugin_reg_num = 0
   TYPE(obs_reader_ptr) :: plugin_reg(plugin_reg_max)
 
-
+!  type(ftlDynArrayobs_reader_ptr) :: foo
 
 CONTAINS
 
@@ -77,10 +78,30 @@ CONTAINS
   !=============================================================================
 
 
-  SUBROUTINE obs_reader_init()
-    TYPE(profile), ALLOCATABLE :: obs(:)
+  SUBROUTINE obs_reader_init(obs)
+    TYPE(ftlDynArrayProfile), intent(out) :: obs
+    integer :: i
+
+    
     PRINT *, plugin_reg(1)%p%name()
+    
+    call obs%new()
+
+    ! read in profiles from the desired plugin
+    ! TODO, specify plugin with namelist
     CALL plugin_reg(1)%p%obs_read(obs)
+
+    
+    print *, "Total obs loaded: ", obs%size()
+
   END SUBROUTINE obs_reader_init
 
 END MODULE obs_reader_mod
+
+
+! #define FTL_TEMPLATE_TYPE obs_reader_ptr
+! #define FTL_TEMPLATE_TYPE_IS_DERIVED
+! #define FTL_TEMPLATE_TYPE_NAME obsReaderPtr
+! #define FTL_TEMPLATE_TYPE_MODULE obs_reader_mod
+! #define FTL_INSTANTIATE_TEMPLATE
+! #include "ftlDynArray.F90_template"

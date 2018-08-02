@@ -24,9 +24,9 @@ set(PLUGIN_MODS "")
 set(PLUGIN_ALLOCS "")
 foreach(p ${PLUGINS})
   target_sources(obsqc PRIVATE ${CMAKE_CURRENT_LIST_DIR}/${p}.F90)
-  STRING(CONCAT PLUGIN_MOD ${PLUGIN_MOD}
+  STRING(CONCAT PLUGIN_MODS ${PLUGIN_MODS}
     "USE ${p}_mod\n")
-  STRING(CONCAT PLUGIN_ALLOC ${PLUGIN_ALLOC}
+  STRING(CONCAT PLUGIN_ALLOCS ${PLUGIN_ALLOCS}
     "ALLOCATE(${p}::ptr)\n"
     "CALL obs_writer_register(ptr)\n" )
 endforeach()
