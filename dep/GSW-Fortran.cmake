@@ -208,3 +208,4 @@ foreach( f IN ITEMS ${GSW_MODULE_SRC})
 endforeach()
 
 add_library(gsw STATIC ${GSW_SRC})
+set(GSW_INCLUDES ${CMAKE_CURRENT_BINARY_DIR})

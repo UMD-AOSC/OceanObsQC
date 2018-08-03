@@ -15,6 +15,8 @@ MODULE profile_mod
      REAL, ALLOCATABLE :: temp(:)
   END TYPE profile
 
+  REAL, PARAMETER, PUBLIC :: PROF_UNDEF = 1.0e10
+
 END MODULE profile_mod
 !===============================================================================
 

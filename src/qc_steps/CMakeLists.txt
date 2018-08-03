@@ -5,7 +5,8 @@
 #   3) class  name is "plugin"
 #-------------------------------------------------------------------------------
 set(PLUGINS
-  QCTEMPLATE
+  qc_depths
+  #QCTEMPLATE
   )
 
 

@@ -2,6 +2,7 @@ MODULE obs_reader_bufr_mod
   USE obs_reader_mod
   USE profile_mod
   USE vec_profile_mod
+  USE gsw_mod_toolbox
 
   IMPLICIT NONE
   PRIVATE
@@ -15,6 +16,9 @@ MODULE obs_reader_bufr_mod
      PROCEDURE         :: obs_read => bufr_read
   END TYPE obs_reader_bufr
   !=============================================================================
+
+
+  REAL, PARAMETER :: BUFR_UNDEF = 9.9e9
 
 
 CONTAINS
@@ -63,6 +67,7 @@ CONTAINS
           CALL readsb(file, iret)
           IF (iret /= 0) EXIT
 
+          ! read in the profiles, in a way depending on the profile type
           valid = .FALSE.
           IF (c1 == "NC031001" .OR. c1 == "NC031002") THEN
              CALL process_bathytesac(file, ob, valid)
@@ -70,11 +75,40 @@ CONTAINS
              CALL process_float(file, ob, valid)
           ELSE
              PRINT *, "WARN: unknown ob type: ", c1
+             STOP 1
           END IF
-          !          PRINT *, ob%lat, ob%lon
-          CALL obs%push_back(ob)
 
+          ! ignore if not data not valid
+          IF (.NOT. valid) CYCLE
+
+          ! TODO should the following checks be pulled outside this reader plugin?
+
+          ! remove levels, values that are undefined
+          ! TODO
+
+          ! if there is no salinity, remove entire array
+          IF(MAXVAL(ob%salt) == MINVAL(ob%salt) .AND. ob%salt(1) == PROF_UNDEF) THEN
+             DEALLOCATE(ob%salt)
+             ALLOCATE(ob%salt(0))
+          END  IF
+
+          ! if there is no temperature, remove entire array
+          IF(MAXVAL(ob%temp) == MINVAL(ob%temp) .AND. ob%temp(1) == PROF_UNDEF) THEN
+             DEALLOCATE(ob%temp)
+             ALLOCATE(ob%temp(0))
+          END  IF
+
+          ! if there are no salt AND no temp obs... don't use this profile
+          ! TODO, might want to reconsider this if we ever assimilate buoy positions
+          IF(SIZE(ob%temp)==0 .AND. SIZE(ob%salt)==0) CYCLE
+
+          ! convert from K to C
+          ob%temp = ob%temp - 273.15
+
+          ! valid ob found, save to list
+          CALL obs%push_back(ob)
           IF(valid) cnt = cnt + 1
+
        END DO
     END DO
 
@@ -116,7 +150,7 @@ CONTAINS
 
     CALL ufbrep(file, r8, MXMN, MXLV, nlv, 'DBSS STMP SALN')
     IF(nlv==0) THEN
-       PRINT *, "ERROR: no levels found"
+       !PRINT *, "ERROR: no levels found"
        RETURN
     END  IF
 
@@ -126,6 +160,11 @@ CONTAINS
     ob%depth = r8(1,1:nlv)
     ob%temp  = r8(2,1:nlv)
     ob%salt  = r8(3,1:nlv)
+
+    ! mark undefined values as undefined
+    WHERE (ob%depth > BUFR_UNDEF) ob%depth = PROF_UNDEF
+    WHERE (ob%temp > BUFR_UNDEF) ob%temp = PROF_UNDEF
+    WHERE (ob%salt > BUFR_UNDEF) ob%salt = PROF_UNDEF
 
     valid = .TRUE.
   END SUBROUTINE process_bathytesac
@@ -157,13 +196,30 @@ CONTAINS
     CALL ufbint(file, r8, MXMN, MXLV, nlv, 'WMOP')
     !PRINT *, "WMOP ", INT(r8(1,1))
     CALL ufbseq(file, r8, MXMN, MXLV, nlv, 'LTLONH')
-    !    PRINT *, "LTLONH ", r8(1:2,1)
+    ob%lat = r8(1,1)
+    ob%lon = r8(2,1)
 
     CALL ufbrep(file, r8, MXMN, MXLV, nlv, 'WPRES SSTH SALNH')
-    !PRINT *, nlv
-    !DO i = 1, nlv
-    !PRINT *, "     ", i,r8(1:3,i)
-    !END DO
+    IF(nlv==0) THEN
+       !PRINT *, "ERROR: no levels found"
+       RETURN
+    END  IF
+
+    ALLOCATE(ob%depth(nlv))
+    ALLOCATE(ob%temp(nlv))
+    ALLOCATE(ob%salt(nlv))
+    ob%depth = r8(1,1:nlv)
+    ob%temp  = r8(2,1:nlv)
+    ob%salt  = r8(3,1:nlv)
+
+    ! mark undefined values as undefined
+    WHERE (ob%depth > BUFR_UNDEF) ob%depth = PROF_UNDEF
+    WHERE (ob%temp > BUFR_UNDEF) ob%temp = PROF_UNDEF
+    WHERE (ob%salt > BUFR_UNDEF) ob%salt = PROF_UNDEF
+
+    ! convert pressure (pascal) to depth (meters)
+    WHERE (ob%depth < BUFR_UNDEF) &
+         ob%depth = -gsw_z_from_p(r8(1,1:nlv)/10000, ob%lat)
 
     valid=.TRUE.
 

@@ -64,21 +64,21 @@ PROGRAM obsqc
   END DO
 
   PRINT *, ""
-  PRINT *, "Available QC step plugins:"
+  !  PRINT *, "Available QC step plugins:"
   CALL register_qc_step_plugins()
-  DO i = 1, qc_steps%SIZE()
-     qc_step_wrapper = qc_steps%get(i)
-     PRINT *, "* ", qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
-  END DO
+  !DO i = 1, qc_steps%SIZE()
+  !qc_step_wrapper = qc_steps%get(i)
+  !PRINT *, "* ", qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
+  !END DO
 
 
-  PRINT *, ""
-  PRINT *, "-------------------------------------------------------------------"
-  PRINT *, ""
 
   ! read in the observations
+  PRINT *, ""
+  PRINT *, "Reading profiles"
+  PRINT *, "---------------------------------------------"
   CALL selected_obs_reader%obs_read(obs)
-  PRINT '(A,I0,A)', "Read ", obs%SIZE(), " profiles."
+  PRINT '(A,I0,A)', " Read ", obs%SIZE(), " profiles."
   PRINT *, ""
 
   ! call each qc step on it
@@ -87,19 +87,25 @@ PROGRAM obsqc
 
      ! perform the QC step
      qc_step_wrapper = qc_steps%get(i)
+     PRINT *, ""
+     PRINT *, qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
+     PRINT *, "---------------------------------------------"
      CALL qc_step_wrapper%p%check(obs, obs2)
 
      ! check to see how many, if any, profiles were removed
-     IF(obs%SIZE() /= obs2%SIZE()) THEN
-        PRINT *, qc_step_wrapper%p%name(), " - removed ", obs%SIZE() - obs2%SIZE()
-     END IF
+     !IF(obs%SIZE() /= obs2%SIZE()) THEN
+     !PRINT *, qc_step_wrapper%p%name(), " - removed ", obs%SIZE() - obs2%SIZE()
+     !END IF
 
      ! get ready for next cycle
      obs = obs2
   END DO
 
   ! write out the obserations
-  PRINT '(A,I0,A)', "Writing ", obs%SIZE(), " profiles."
+  PRINT *, ""
+  PRINT *, "Writing profiles"
+  PRINT *, "---------------------------------------------"
+  PRINT '(A,I0,A)', " Writing ", obs%SIZE(), " profiles."
   CALL selected_obs_writer%obs_write(obs)
 
 END PROGRAM obsqc

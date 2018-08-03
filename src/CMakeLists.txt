@@ -4,6 +4,14 @@ find_package(Bufr REQUIRED)
 # include the "fortran template library"
 include_directories(${GFTL_INCLUDE})
 
+# find netcdf
+set(NETCDF_F90 "YES")
+find_package(NetCDF REQUIRED)
+include_directories(${NETCDF_INCLUDE_DIRS})
+
+include_directories(${GSW_INCLUDES})
+
+
 # core source files and exectubable creation
 set(obsqc_srcs
   obsqc.F90
@@ -14,7 +22,11 @@ set(obsqc_srcs
 )
 
 add_executable( obsqc ${obsqc_srcs})
-target_link_libraries(obsqc ${BUFR_LIBRARY} gsw)
+target_link_libraries(obsqc
+  ${BUFR_LIBRARY}
+  gsw
+  ${NETCDF_LIBRARIES}
+)
 
 # add plugin source files to the executable
 add_subdirectory(obs_readers)
