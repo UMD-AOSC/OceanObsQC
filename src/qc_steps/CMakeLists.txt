@@ -3,13 +3,13 @@
 #   1) file   name is "plugin".F90
 #   2) module name is "plugin"_mod
 #   3) class  name is "plugin"
+#
+# The plugins are executed in the order that they are given below
 #-------------------------------------------------------------------------------
 set(PLUGINS
   qc_vrt_avg
   qc_time_avg
   qc_depths
-  
-  #QCTEMPLATE
   )
 
 

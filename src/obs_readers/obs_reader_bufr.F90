@@ -120,7 +120,6 @@ CONTAINS
        END DO
     END DO
 
-    !    PRINT *, "Found ",cnt,"profiles"
     ! all done cleanup
     CALL closbf(file)
     CLOSE(file)
@@ -146,16 +145,24 @@ CONTAINS
 
     valid = .FALSE.
 
+    ! year, month, day
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'YYMMDD')
-    !    PRINT *, 'YYMMDD ', r8(1:3,1)
+    WRITE(ob%date, '(I4.4,I2.2,I2.2)') INT(r8(1:3,1))
+
+    ! hour of day (fractional)
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'HHMM')
-    !PRINT *, 'HHMM ', r8(1:2,1)
+    ob%hour = r8(1,1) + r8(2,1) / 60.0
+
+    ! platform callsign
     CALL ufbint(file, r8, MXMN, MXLV, nlv, 'RPID')
-    !PRINT *, "RPID ", nlv, str
+    ob%id = str
+
+    ! lat/lon
     CALL ufbseq(file, r8, MXMN, MXLV, nlv, 'LTLONH')
     ob%lat = r8(1,1)
     ob%lon = r8(2,1)
 
+    ! depth, temperature, salinity
     CALL ufbrep(file, r8, MXMN, MXLV, nlv, 'DBSS STMP SALN')
     IF(nlv==0) THEN
        !PRINT *, "ERROR: no levels found"
@@ -174,7 +181,9 @@ CONTAINS
     WHERE (ob%temp > BUFR_UNDEF) ob%temp = PROF_UNDEF
     WHERE (ob%salt > BUFR_UNDEF) ob%salt = PROF_UNDEF
 
+    ! all done
     valid = .TRUE.
+
   END SUBROUTINE process_bathytesac
   !=============================================================================
 
@@ -195,24 +204,34 @@ CONTAINS
     CHARACTER str*(8), str2*(8)
     EQUIVALENCE (r8, str)
 
-    !    PRINT *, ""
-    ! datetime
+
+    ! year, month, day
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'YYMMDD')
-    !    PRINT *, 'YYMMDD ', r8(1:3,1)
+    WRITE(ob%date, '(I4.4,I2.2,I2.2)') INT(r8(1:3,1))
+
+    ! hour of day(fractional)
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'HHMM')
-    !PRINT *, 'HHMM ', r8(1:2,1)
+    ob%hour = r8(1,1) + r8(2,1) / 60.0
+
+    ! callsign
     CALL ufbint(file, r8, MXMN, MXLV, nlv, 'WMOP')
-    !PRINT *, "WMOP ", INT(r8(1,1))
+    IF( r8(1,1) > 9999999) THEN
+       PRINT *, "ERROR: float with id greater than 7 characers found"
+       STOP
+    END IF
+    WRITE (ob%id, '(I8)') INT(r8(1,1))
+
+    ! lat/lon
     CALL ufbseq(file, r8, MXMN, MXLV, nlv, 'LTLONH')
     ob%lat = r8(1,1)
     ob%lon = r8(2,1)
 
+    ! pressure, temperature, salinity
     CALL ufbrep(file, r8, MXMN, MXLV, nlv, 'WPRES SSTH SALNH')
     IF(nlv==0) THEN
        !PRINT *, "ERROR: no levels found"
        RETURN
     END  IF
-
     ALLOCATE(ob%depth(nlv))
     ALLOCATE(ob%temp(nlv))
     ALLOCATE(ob%salt(nlv))
@@ -229,6 +248,7 @@ CONTAINS
     WHERE (ob%depth < BUFR_UNDEF) &
          ob%depth = -gsw_z_from_p(r8(1,1:nlv)/10000, ob%lat)
 
+    ! all done
     valid=.TRUE.
 
   END SUBROUTINE process_float

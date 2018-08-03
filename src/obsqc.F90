@@ -1,3 +1,10 @@
+!===============================================================================
+!> NCEP Ocean Profile Observation Quality Control
+!!
+!! This program reads in a file of profile observations, does several
+!! quality control steps on the set of profiles, and writes the result out
+!! to a new file.
+!-------------------------------------------------------------------------------
 PROGRAM obsqc
 
   ! obs_reader plugins
@@ -116,21 +123,6 @@ PROGRAM obsqc
   PRINT  '(A,I0)',' QC plugins registered: ', qc_steps%SIZE()
 
 
-  ! give all the plugins a reference to the namelist in case they need
-  ! to use it to initialize
-  !PRINT *, ""
-  !PRINT *, ""
-  !PRINT *, "---------------------------------------------"
-  !PRINT *, "Intializing plugins"
-  !PRINT *, "---------------------------------------------"
-  !DO i =1, qc_steps%SIZE()
-  !qc_step_wrapper = qc_steps%get(i)
-  !PRINT *, qc_step_wrapper%p%name()
-  !CALL qc_step_wrapper%p%init(nmlfile)
-  !END DO
-
-
-
   ! read in the observations
   PRINT *, ""
   PRINT *, ""
@@ -141,6 +133,7 @@ PROGRAM obsqc
   PRINT '(A,I0,A)', " Read ", obs%SIZE(), " profiles."
   PRINT *, ""
   PRINT *, ""
+
 
   ! call each qc step on the profile list
   PRINT *, "---------------------------------------------"
