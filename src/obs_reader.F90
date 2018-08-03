@@ -21,9 +21,10 @@ MODULE obs_reader_mod
        CHARACTER(:), ALLOCATABLE :: I_reader_getstr
      END FUNCTION I_reader_getstr
 
-     SUBROUTINE I_reader_read(self, obs)
+     SUBROUTINE I_reader_read(self, filename, obs)
        IMPORT obs_reader, vec_profile
        CLASS(obs_reader) :: self
+       CHARACTER(len=*),  INTENT(in)    :: filename
        TYPE(vec_profile), INTENT(inout) :: obs
      END SUBROUTINE I_reader_read
   END INTERFACE

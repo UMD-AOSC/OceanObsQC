@@ -34,8 +34,9 @@ CONTAINS
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
-  SUBROUTINE wod_read(self, obs)
+  SUBROUTINE wod_read(self, filename, obs)
     CLASS(obs_reader_wod) :: self
+    CHARACTER(len=*),  INTENT(in)    :: filename
     TYPE(vec_profile), INTENT(inout) :: obs
 
     PRINT *, "WOD reader not yet implemented"

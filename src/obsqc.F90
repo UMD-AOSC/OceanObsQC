@@ -19,8 +19,11 @@ PROGRAM obsqc
   USE profile_mod
   USE vec_profile_mod
 
-
   IMPLICIT NONE
+
+
+  CHARACTER(len=1024) :: in_filename
+  CHARACTER(len=1024) :: out_filename
 
   INTEGER :: i
   TYPE(vec_profile) :: obs, obs2
@@ -39,6 +42,14 @@ PROGRAM obsqc
   PRINT *, " Git repo version: ", CVERSION
   PRINT *, "==================================================================="
 
+  ! get the command line arguments for input output filenames
+  i = command_argument_COUNT()
+  IF (i /= 2) THEN
+     PRINT *, 'ERROR: call with "obsqc <inputfile> <outputfile>"'
+     STOP 1
+  END IF
+  CALL get_command_ARGUMENT(1, VALUE=in_filename)
+  CALL get_command_ARGUMENT(2, VALUE=out_filename)
 
   ! Determine which plugin to use for reading observations
   PRINT *, ""
@@ -77,7 +88,7 @@ PROGRAM obsqc
   PRINT *, ""
   PRINT *, "Reading profiles"
   PRINT *, "---------------------------------------------"
-  CALL selected_obs_reader%obs_read(obs)
+  CALL selected_obs_reader%obs_read(TRIM(in_filename), obs)
   PRINT '(A,I0,A)', " Read ", obs%SIZE(), " profiles."
   PRINT *, ""
 
@@ -106,6 +117,6 @@ PROGRAM obsqc
   PRINT *, "Writing profiles"
   PRINT *, "---------------------------------------------"
   PRINT '(A,I0,A)', " Writing ", obs%SIZE(), " profiles."
-  CALL selected_obs_writer%obs_write(obs)
+  CALL selected_obs_writer%obs_write(out_filename, obs)
 
 END PROGRAM obsqc

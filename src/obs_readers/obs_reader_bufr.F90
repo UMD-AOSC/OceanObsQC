@@ -38,8 +38,9 @@ CONTAINS
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
-  SUBROUTINE bufr_read(self, obs)
+  SUBROUTINE bufr_read(self, filename, obs)
     CLASS(obs_reader_bufr) :: self
+    CHARACTER(len=*),  INTENT(in)    :: filename
     TYPE(vec_profile), INTENT(inout) :: obs
 
     LOGICAL :: valid
@@ -50,9 +51,16 @@ CONTAINS
     TYPE(profile), ALLOCATABLE :: prf(:)
     INTEGER ::cnt
 
+    ! make sure input file exists
+    INQUIRE(file=filename, exist=valid)
+    IF(.NOT. valid) THEN
+       PRINT *, "input file not found: ", TRIM(filename)
+       STOP 1
+    END IF
+
     !open file
     file=90
-    OPEN(unit=file, file='xx001')
+    OPEN(unit=file, file=filename)
     CALL openbf(file,'IN',file)
     CALL datelen(10)
 

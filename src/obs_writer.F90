@@ -20,9 +20,10 @@ MODULE obs_writer_mod
        CHARACTER(:), ALLOCATABLE :: I_writer_getstr
      END FUNCTION I_writer_getstr
 
-     SUBROUTINE I_writer_write(self, obs)
+     SUBROUTINE I_writer_write(self, filename, obs)
        IMPORT obs_writer, vec_profile
        CLASS(obs_writer), INTENT(inout) :: self
+       CHARACTER(len=*),  INTENT(in)    :: filename
        TYPE(vec_profile), INTENT(in) :: obs
      END SUBROUTINE I_writer_write
 

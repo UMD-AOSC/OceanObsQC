@@ -38,11 +38,11 @@ CONTAINS
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
-  SUBROUTINE writer_nc_write(self, obs)
+  SUBROUTINE writer_nc_write(self, filename, obs)
     CLASS(obs_writer_nc), INTENT(inout) :: self
+    CHARACTER(len=*),  INTENT(in)    :: filename
     TYPE(vec_profile), INTENT(in) :: obs
 
-    CHARACTER(:), ALLOCATABLE :: filename
     INTEGER :: ncid, d_prfs, d_obs, vid
 
     TYPE(profile) :: prf
@@ -85,8 +85,7 @@ CONTAINS
     END DO
 
     ! output file definition
-    filename = "output.nc"
-    CALL check(nf90_create(filename, NF90_CLOBBER, ncid))
+    CALL check(nf90_create(filename, NF90_NOCLOBBER, ncid))
 
     CALL check(nf90_def_dim(ncid, "prfs", INT(obs%SIZE()), d_prfs))
     CALL check(nf90_def_dim(ncid, "obs", obs_count, d_obs))

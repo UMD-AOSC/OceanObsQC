@@ -36,8 +36,9 @@ CONTAINS
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
-  SUBROUTINE reader_nc_read(self, obs)
+  SUBROUTINE reader_nc_read(self, filename, obs)
     CLASS(obs_reader_nc) :: self
+    CHARACTER(len=*),  INTENT(in)    :: filename
     TYPE(vec_profile), INTENT(inout) :: obs
 
     PRINT *, "NetCDF reader not yet implemented"
