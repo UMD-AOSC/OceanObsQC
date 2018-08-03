@@ -4,9 +4,10 @@ project(OceanObsQC LANGUAGES Fortran)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+# compile 3rd party dependencies
+add_subdirectory(dep)
 
 # determine the repository version
-#------------------------------------------------------------
 execute_process(COMMAND git describe --dirty --tags --always
   OUTPUT_VARIABLE GIT_VERSION
   RESULT_VARIABLE RES
@@ -17,11 +18,6 @@ if(NOT ${RES} EQUAL "0")
 endif()
 add_definitions(-DCVERSION=\"${GIT_VERSION}\")
 message(STATUS "Git repository version: ${GIT_VERSION}")
-
-
-
-# compile 3rd party dependencies
-add_subdirectory(dep)
 
 # compile our code
 add_subdirectory(src)
