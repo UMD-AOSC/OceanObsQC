@@ -12,7 +12,8 @@ MODULE qc_step_mod
    CONTAINS
      PROCEDURE(I_qc_step_getstr), NOPASS, DEFERRED :: name
      PROCEDURE(I_qc_step_getstr), NOPASS, DEFERRED :: desc
-     PROCEDURE(I_qc_step_check),          DEFERRED :: check
+     PROCEDURE(I_qc_step_init),   NOPASS, DEFERRED :: init
+     PROCEDURE(I_qc_step_check),  NOPASS, DEFERRED :: check
   END TYPE qc_step
 
   ABSTRACT INTERFACE
@@ -21,9 +22,12 @@ MODULE qc_step_mod
        CHARACTER(:), ALLOCATABLE :: I_qc_step_getstr
      END FUNCTION I_qc_step_getstr
 
-     SUBROUTINE I_qc_step_check(self, obs_in, obs_out)
-       IMPORT qc_step, vec_profile
-       CLASS(qc_step),    INTENT(inout) :: self
+     SUBROUTINE I_qc_step_init(nmlfile)
+       INTEGER, INTENT(in) :: nmlfile
+     END SUBROUTINE I_qc_step_init
+
+     SUBROUTINE I_qc_step_check(obs_in, obs_out)
+       IMPORT vec_profile
        TYPE(vec_profile), INTENT(in)    :: obs_in
        TYPE(vec_profile), INTENT(inout) :: obs_out
      END SUBROUTINE I_qc_step_check

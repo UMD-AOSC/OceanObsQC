@@ -25,7 +25,7 @@ PROGRAM obsqc
   CHARACTER(len=1024) :: in_filename
   CHARACTER(len=1024) :: out_filename
 
-  INTEGER :: i
+  INTEGER :: i, nmlfile
   TYPE(vec_profile) :: obs, obs2
   TYPE(profile) :: ob
 
@@ -36,11 +36,18 @@ PROGRAM obsqc
   CLASS(obs_reader), POINTER :: selected_obs_reader
   CLASS(obs_writer), POINTER :: selected_obs_writer
 
+  ! variables that are read in from the namelist
+  CHARACTER(:), ALLOCATABLE :: obs_reader_type
+  CHARACTER(:), ALLOCATABLE :: obs_writer_type
+
+  NAMELIST /obsqc_nml/ obs_reader_type, obs_writer_type
+
   PRINT *, ""
   PRINT *, "==================================================================="
   PRINT *, "NCEP Ocean Observation Qualtiy Control"
   PRINT *, " Git repo version: ", CVERSION
   PRINT *, "==================================================================="
+
 
   ! get the command line arguments for input output filenames
   i = command_argument_COUNT()
@@ -51,7 +58,20 @@ PROGRAM obsqc
   CALL get_command_ARGUMENT(1, VALUE=in_filename)
   CALL get_command_ARGUMENT(2, VALUE=out_filename)
 
-  ! Determine which plugin to use for reading observations
+
+  ! open the namelist file
+  ! grab the main parameters we need
+  OPEN(newunit=nmlfile, file='obsqc.nml')
+  ALLOCATE(CHARACTER(len=1024) :: obs_reader_type)
+  ALLOCATE(CHARACTER(len=1024) :: obs_writer_type)
+  READ(nmlfile, obsqc_nml)
+  obs_reader_type = TRIM(obs_reader_type)
+  obs_writer_type = TRIM(obs_writer_type)
+  PRINT obsqc_nml
+
+
+  ! print a list of all the obs reader plugins registered,
+  ! and determine which plugin to use
   PRINT *, ""
   PRINT *, "Available observation reader plugins:"
   CALL register_obs_reader_plugins()
@@ -59,61 +79,98 @@ PROGRAM obsqc
   DO i = 1, obs_readers%SIZE()
      obs_reader_wrapper = obs_readers%get(i)
      PRINT *, "* ", obs_reader_wrapper%p%name()
-     ! TODO, add the real selection here
-     IF (i == 1) selected_obs_reader => obs_reader_wrapper%p
+     IF (obs_reader_wrapper%p%name() == obs_reader_type)&
+          selected_obs_reader => obs_reader_wrapper%p
   END DO
+  IF (.NOT. ASSOCIATED(selected_obs_reader)) THEN
+     PRINT *, 'ERROR: observation reader type "', obs_reader_type, &
+          '" not found. Check the namelist.'
+     STOP 1
+  END IF
+  PRINT *, "Using: ", selected_obs_reader%name()
 
-  ! Determine which plugin to use for writing observations at the end
+
+  ! Print a list of all obs writer plugins registered,
+  ! and determine which plugin to use
   PRINT *, ""
   PRINT *, "Available observation writer plugins:"
   CALL register_obs_writer_plugins()
+  selected_obs_writer=>NULL()
   DO i = 1, obs_writers%SIZE()
      obs_writer_wrapper = obs_writers%get(i)
      PRINT *, "* ", obs_writer_wrapper%p%name()
-     ! TODO, add the real selection where
-     IF (i==1) selected_obs_writer => obs_writer_wrapper%p
+     IF (obs_writer_wrapper%p%name() == obs_writer_type)&
+          selected_obs_writer => obs_writer_wrapper%p
   END DO
+  IF (.NOT. ASSOCIATED(selected_obs_writer)) THEN
+     PRINT *, 'ERROR: observation writer type "', obs_writer_type, &
+          '" not found. Check the namelist.'
+     STOP 1
+  END IF
+  PRINT *, "Using: ", selected_obs_writer%name()
 
+
+  ! register all the qc_step plugins
   PRINT *, ""
-  !  PRINT *, "Available QC step plugins:"
   CALL register_qc_step_plugins()
-  !DO i = 1, qc_steps%SIZE()
+  PRINT  '(A,I0)',' QC plugins registered: ', qc_steps%SIZE()
+
+
+  ! give all the plugins a reference to the namelist in case they need
+  ! to use it to initialize
+  !PRINT *, ""
+  !PRINT *, ""
+  !PRINT *, "---------------------------------------------"
+  !PRINT *, "Intializing plugins"
+  !PRINT *, "---------------------------------------------"
+  !DO i =1, qc_steps%SIZE()
   !qc_step_wrapper = qc_steps%get(i)
-  !PRINT *, "* ", qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
+  !PRINT *, qc_step_wrapper%p%name()
+  !CALL qc_step_wrapper%p%init(nmlfile)
   !END DO
 
 
 
   ! read in the observations
   PRINT *, ""
+  PRINT *, ""
+  PRINT *, "---------------------------------------------"
   PRINT *, "Reading profiles"
   PRINT *, "---------------------------------------------"
   CALL selected_obs_reader%obs_read(TRIM(in_filename), obs)
   PRINT '(A,I0,A)', " Read ", obs%SIZE(), " profiles."
   PRINT *, ""
+  PRINT *, ""
 
-  ! call each qc step on it
+  ! call each qc step on the profile list
+  PRINT *, "---------------------------------------------"
+  PRINT *, "Running QC step plugins"
+  PRINT *, "---------------------------------------------"
   DO i=1, qc_steps%SIZE()
      obs2 = vec_profile()
+     qc_step_wrapper = qc_steps%get(i)
+
+     PRINT *, ""
+     PRINT *, ""
+     PRINT '(I3,5A)', i, ') ', qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
+     PRINT *, "---------------------------------------------"
+
+     ! initialize the module
+     REWIND(nmlfile)
+     CALL qc_step_wrapper%p%init(nmlfile)
 
      ! perform the QC step
-     qc_step_wrapper = qc_steps%get(i)
-     PRINT *, ""
-     PRINT *, qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
-     PRINT *, "---------------------------------------------"
      CALL qc_step_wrapper%p%check(obs, obs2)
-
-     ! check to see how many, if any, profiles were removed
-     !IF(obs%SIZE() /= obs2%SIZE()) THEN
-     !PRINT *, qc_step_wrapper%p%name(), " - removed ", obs%SIZE() - obs2%SIZE()
-     !END IF
 
      ! get ready for next cycle
      obs = obs2
   END DO
 
+
   ! write out the obserations
   PRINT *, ""
+  PRINT *, ""
+  PRINT *, "---------------------------------------------"
   PRINT *, "Writing profiles"
   PRINT *, "---------------------------------------------"
   PRINT '(A,I0,A)', " Writing ", obs%SIZE(), " profiles."
