@@ -147,7 +147,7 @@ CONTAINS
 
     ! year, month, day
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'YYMMDD')
-    WRITE(ob%date, '(I4.4,I2.2,I2.2)') INT(r8(1:3,1))
+    ob%date = r8(1,1)*10000 + r8(2,1)*100 + r8(3,1)    
 
     ! hour of day (fractional)
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'HHMM')
@@ -207,7 +207,7 @@ CONTAINS
 
     ! year, month, day
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'YYMMDD')
-    WRITE(ob%date, '(I4.4,I2.2,I2.2)') INT(r8(1:3,1))
+    ob%date = r8(1,1)*10000 + r8(2,1)*100 + r8(3,1)
 
     ! hour of day(fractional)
     CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'HHMM')

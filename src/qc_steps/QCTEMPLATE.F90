@@ -51,9 +51,9 @@ CONTAINS
   !> A short, human friendly, description of what this QC step does.
   !! Should ideally fit on one line
   !-----------------------------------------------------------------------------
-  FUNCTION qc_step_desc() RESULT(name)
-    CHARACTER(:), ALLOCATABLE :: name
-    name = "This is a blank QC step template... it doesn't do anything"
+  FUNCTION qc_step_desc() RESULT(desc)
+    CHARACTER(:), ALLOCATABLE :: desc
+    desc = "This is a blank QC step template... it doesn't do anything"
   END FUNCTION qc_step_desc
   !=============================================================================
 

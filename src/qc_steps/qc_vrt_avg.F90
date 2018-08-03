@@ -39,9 +39,9 @@ CONTAINS
   !> A short, human friendly, description of what this QC step does.
   !! Should ideally fit on one line
   !-----------------------------------------------------------------------------
-  FUNCTION qc_step_desc() RESULT(name)
-    CHARACTER(:), ALLOCATABLE :: name
-    name = "vertical averaging of dense levels"
+  FUNCTION qc_step_desc() RESULT(desc)
+    CHARACTER(:), ALLOCATABLE :: desc
+    desc = "vertical averaging of dense levels"
   END FUNCTION qc_step_desc
   !=============================================================================
 
