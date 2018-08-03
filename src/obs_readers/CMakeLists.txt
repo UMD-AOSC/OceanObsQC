@@ -5,11 +5,13 @@
 #   3) class  name is "plugin"
 #-------------------------------------------------------------------------------
 set(PLUGINS
-  obs_reader_bufr
   obs_reader_nc
   obs_reader_wod
 )
 
+if(OBSQC_USE_BUFR)
+  list(APPEND PLUGINS obs_reader_bufr)
+endif()
 
 
 

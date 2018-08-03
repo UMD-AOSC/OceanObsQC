@@ -4,6 +4,9 @@ project(OceanObsQC LANGUAGES Fortran)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+# options
+option(OBSQC_USE_BUFR "If true, compile with support for BUFR library" ON)
+
 # compile 3rd party dependencies
 add_subdirectory(dep)
 
