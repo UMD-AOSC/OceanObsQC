@@ -130,7 +130,7 @@ PROGRAM obsqc
   PRINT *, "Reading profiles"
   PRINT *, "---------------------------------------------"
   CALL selected_obs_reader%obs_read(TRIM(in_filename), obs)
-  PRINT '(A,I0,A)', " Read ", obs%SIZE(), " profiles."
+  call prof_stats(obs)
   PRINT *, ""
   PRINT *, ""
 
@@ -166,7 +166,49 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Writing profiles"
   PRINT *, "---------------------------------------------"
-  PRINT '(A,I0,A)', " Writing ", obs%SIZE(), " profiles."
+  call prof_stats(obs)
   CALL selected_obs_writer%obs_write(out_filename, obs)
 
+
+  
+contains
+
+  
+
+  !============================================================
+  subroutine prof_stats(profs)
+    type(vec_profile), intent(in) :: profs
+
+    integer :: i
+    integer :: prf_t_cnt, prf_s_cnt, obs_t_cnt, obs_s_cnt
+    type(profile) :: prf
+
+    
+    prf_t_cnt = 0
+    prf_s_cnt = 0
+    obs_t_cnt = 0
+    obs_s_cnt = 0
+
+    do i=1,obs%size()
+       prf = obs%get(i)
+       if ( size(prf%temp) > 0) then
+          prf_t_cnt = prf_t_cnt + 1
+          obs_t_cnt = obs_t_cnt + size(prf%temp)
+       end if
+       if ( size(prf%salt) > 0) then
+          prf_s_cnt = prf_s_cnt + 1
+          obs_s_cnt = obs_s_cnt + size(prf%salt)
+       end if     
+    end do
+
+    print *, ""
+    print '(I10, A)', prf_t_cnt, ' TEMP profiles'
+    print '(I10, A)', prf_s_cnt, ' SALT profiles'
+    print *, ""
+    print '(I10, A)', obs_t_cnt, ' total TEMP observations'
+    print '(I10, A)', obs_s_cnt, ' total SALT observations'
+    
+  end subroutine prof_stats
+  !============================================================
+  
 END PROGRAM obsqc
