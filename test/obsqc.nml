@@ -1,0 +1,9 @@
+&obsqc_nml
+  obs_reader_type="BUFR"
+  obs_writer_type="NC"
+/
+
+&qc_depths
+  min_levels=3
+  max_depth=7000
+/
