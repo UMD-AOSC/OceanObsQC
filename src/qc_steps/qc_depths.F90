@@ -1,9 +1,11 @@
 !===============================================================================
-!> QC plugin to filter out observations with bad depth values.
+!> QC step to filter out observations with bad depth values.
 !! Removes a profile if any of these are true:
 !!  1) not enough vertical levels
-!!  2) max depth is unrealistic
-!!  3) depths do not increase monotonically
+!!  2) Staring depth is too deep
+!!  3) max depth is unrealistic
+!!  4) depths do not increase monotonically
+!!  5) there is a large vertical gap
 !-------------------------------------------------------------------------------
 MODULE qc_depths_mod
   USE qc_step_mod
