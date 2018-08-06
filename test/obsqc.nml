@@ -5,8 +5,13 @@
 
 
 &qc_depths
-  ! Check for monotonically increasing depths, and if any of the following
-  ! conditions are violated, the profile is removed.
+  ! Check for proper monotonically increasing depths, with sufficient levels.
+  ! A profile is removed if any of the following checks fail.
+
+  check_nonmono=T   ! check to ensure depth values increase monotonically
+
+  ! NOTE: setting any of the following to negative will disable that
+  !  individual test
 
   min_levels=3      ! minimum number of vertical levels required
   max_depth=7000.0  ! maximum depth allowed (meters)

@@ -24,12 +24,18 @@ MODULE qc_depths_mod
   END TYPE qc_depths
   !=============================================================================
 
+
+  ! parameters to be read in from the namelist
+  LOGICAL :: check_nonmono = .TRUE.
   INTEGER :: min_levels = 3
   REAL    :: max_depth = 10000
   REAL    :: max_start = 10.0
   REAL    :: max_gap   = 500.0
 
+
+
 CONTAINS
+
 
 
   !=============================================================================
@@ -39,8 +45,8 @@ CONTAINS
     CHARACTER(:), ALLOCATABLE :: name
     name = "qc_depths"
   END FUNCTION qc_step_name
-  !=============================================================================
 
+  !=============================================================================
 
 
   !=============================================================================
@@ -64,7 +70,7 @@ CONTAINS
   SUBROUTINE qc_step_init(nmlfile)
     INTEGER, INTENT(in) :: nmlfile
 
-    NAMELIST /qc_depths/ min_levels, max_depth, max_start, max_gap
+    NAMELIST /qc_depths/ check_nonmono, min_levels, max_start, max_depth, max_gap
     READ(nmlfile, qc_depths)
     PRINT qc_depths
 
@@ -104,21 +110,21 @@ CONTAINS
 
 
        ! remove if profile does not have enough levels
-       IF(SIZE(prof%depth) < min_levels) THEN
+       IF(min_levels > 0 .AND. SIZE(prof%depth) < min_levels) THEN
           bad_minpoints = bad_minpoints + 1
           CYCLE
        END IF
 
 
        ! check first level too deep
-       IF(prof%depth(1) > max_start) THEN
+       IF(max_start > 0 .AND. prof%depth(1) > max_start) THEN
           bad_deepstart = bad_deepstart + 1
           CYCLE
        END IF
 
 
        ! check unrealistic max depth
-       IF(MAXVAL(prof%depth) > max_depth) THEN
+       IF(max_depth > 0 .AND. MAXVAL(prof%depth) > max_depth) THEN
           bad_maxdepth = bad_maxdepth + 1
           CYCLE
        END IF
@@ -128,13 +134,13 @@ CONTAINS
        each_lvl: DO j=2,SIZE(prof%depth)
 
           ! check for non-monotonic depths
-          IF (prof%depth(j) < prof%depth(j-1)) THEN
+          IF (check_nonmono .AND. prof%depth(j) < prof%depth(j-1)) THEN
              bad_nonmono = bad_nonmono + 1
              CYCLE each_profile
           END IF
 
           ! check for large vertical gap
-          IF (prof%depth(j) - prof%depth(j-1) > max_gap) THEN
+          IF (max_gap > 0 .AND. prof%depth(j) - prof%depth(j-1) > max_gap) THEN
              bad_largegap = bad_largegap + 1
              CYCLE each_profile
           END IF
