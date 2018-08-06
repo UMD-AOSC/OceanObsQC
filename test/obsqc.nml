@@ -3,7 +3,13 @@
   obs_writer_type="NC"
 /
 
+
 &qc_depths
-  min_levels=3
-  max_depth=7000
+  ! Check for monotonically increasing depths, and if any of the following
+  ! conditions are violated, the profile is removed.
+
+  min_levels=3      ! minimum number of vertical levels required
+  max_depth=7000.0  ! maximum depth allowed (meters)
+  max_start=36.0    ! first level must be above this depth (meters)
+  max_gap=500.0     ! no vertical gaps larger than this allowed (meters)
 /

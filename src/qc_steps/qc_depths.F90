@@ -26,6 +26,8 @@ MODULE qc_depths_mod
 
   INTEGER :: min_levels = 3
   REAL    :: max_depth = 10000
+  REAL    :: max_start = 10.0
+  REAL    :: max_gap   = 500.0
 
 CONTAINS
 
@@ -62,7 +64,7 @@ CONTAINS
   SUBROUTINE qc_step_init(nmlfile)
     INTEGER, INTENT(in) :: nmlfile
 
-    NAMELIST /qc_depths/ min_levels, max_depth
+    NAMELIST /qc_depths/ min_levels, max_depth, max_start, max_gap
     READ(nmlfile, qc_depths)
     PRINT qc_depths
 
@@ -86,17 +88,20 @@ CONTAINS
 
     INTEGER :: i, j
     TYPE(profile) :: prof
-    LOGICAL :: valid
 
-    INTEGER :: bad_minpoints, bad_maxdepth, bad_nonmono
+    INTEGER :: bad_minpoints, bad_maxdepth, bad_nonmono, bad_deepstart, &
+         bad_largegap
 
     bad_minpoints = 0
     bad_maxdepth = 0
     bad_nonmono = 0
+    bad_deepstart = 0
+    bad_largegap  = 0
 
     ! check each profile
-    DO i = 1, obs_in%SIZE()
+    each_profile: DO i = 1, obs_in%SIZE()
        prof = obs_in%get(i)
+
 
        ! remove if profile does not have enough levels
        IF(SIZE(prof%depth) < min_levels) THEN
@@ -104,36 +109,56 @@ CONTAINS
           CYCLE
        END IF
 
+
+       ! check first level too deep
+       IF(prof%depth(1) > max_start) THEN
+          bad_deepstart = bad_deepstart + 1
+          CYCLE
+       END IF
+
+
        ! check unrealistic max depth
        IF(MAXVAL(prof%depth) > max_depth) THEN
           bad_maxdepth = bad_maxdepth + 1
           CYCLE
        END IF
 
-       ! check for non-monotonic depths
-       valid = .TRUE.
-       DO j=2,SIZE(prof%depth)
+
+       ! loop for several tests that compare each level to the next
+       each_lvl: DO j=2,SIZE(prof%depth)
+
+          ! check for non-monotonic depths
           IF (prof%depth(j) < prof%depth(j-1)) THEN
              bad_nonmono = bad_nonmono + 1
-             valid = .FALSE.
-             EXIT
+             CYCLE each_profile
           END IF
-       END DO
-       IF(.NOT. valid) CYCLE
+
+          ! check for large vertical gap
+          IF (prof%depth(j) - prof%depth(j-1) > max_gap) THEN
+             bad_largegap = bad_largegap + 1
+             CYCLE each_profile
+          END IF
+       END DO each_lvl
+
 
        ! profile passes checks, add it to the output list
        CALL obs_out%push_back(prof)
 
-    END DO
+    END DO each_profile
 
 
     ! print out stats if any profiles were removed
+    ! NOTE: these should be printed in the order that they were checked
     IF(bad_minpoints > 0)&
          PRINT '(I8,A)', bad_minpoints, ' profiles removed for too few levels'
+    IF(bad_deepstart > 0)&
+         PRINT '(I8,A)', bad_deepstart, ' profiles removed for starting too deep.'
     IF(bad_maxdepth > 0)&
          PRINT '(I8,A)', bad_maxdepth, ' profiles removed for max depth too large'
     IF(bad_nonmono > 0)&
          PRINT '(I8,A)', bad_nonmono, ' profiles removed for non-monotonic depths'
+    IF(bad_largegap > 0)&
+         PRINT '(I8,A)', bad_largegap, ' profiles removed for large vertical gap.'
 
   END SUBROUTINE qc_step_check
   !=============================================================================
