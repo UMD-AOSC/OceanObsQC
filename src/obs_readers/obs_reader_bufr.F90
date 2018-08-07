@@ -89,29 +89,8 @@ CONTAINS
           ! ignore if not data not valid
           IF (.NOT. valid) CYCLE
 
-          ! TODO should the following checks be pulled outside this reader plugin?
-
-          ! remove levels, values that are undefined
-          ! TODO
-
-          ! if there is no salinity, remove entire array
-          IF(MAXVAL(ob%salt) == MINVAL(ob%salt) .AND. ob%salt(1) == PROF_UNDEF) THEN
-             DEALLOCATE(ob%salt)
-             ALLOCATE(ob%salt(0))
-          END  IF
-
-          ! if there is no temperature, remove entire array
-          IF(MAXVAL(ob%temp) == MINVAL(ob%temp) .AND. ob%temp(1) == PROF_UNDEF) THEN
-             DEALLOCATE(ob%temp)
-             ALLOCATE(ob%temp(0))
-          END  IF
-
-          ! if there are no salt AND no temp obs... don't use this profile
-          ! TODO, might want to reconsider this if we ever assimilate buoy positions
-          IF(SIZE(ob%temp)==0 .AND. SIZE(ob%salt)==0) CYCLE
-
           ! convert from K to C
-          ob%temp = ob%temp - 273.15
+          WHERE(ob%temp < PROF_UNDEF) ob%temp = ob%temp - 273.15
 
           ! valid ob found, save to list
           CALL obs%push_back(ob)
