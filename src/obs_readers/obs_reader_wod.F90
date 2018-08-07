@@ -58,14 +58,12 @@ CONTAINS
     OPEN(newunit=unit, file=filename, action='READ', status='old')
     valid = .TRUE.
     DO WHILE(valid)
-       CALL read_wod_rec(unit, valid)
+       CALL read_wod_rec(unit, ob, valid)
        IF(valid) CALL obs%push_back(ob)
     END DO
 
     ! all done, close file
     CLOSE(unit)
-
-    STOP 1
 
   END SUBROUTINE wod_read
   !=============================================================================
@@ -75,8 +73,9 @@ CONTAINS
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
-  SUBROUTINE read_wod_rec(unit, valid)
+  SUBROUTINE read_wod_rec(unit, ob, valid)
     INTEGER, INTENT(in) :: unit
+    type(profile), intent(out) :: ob
     LOGICAL, INTENT(out) :: valid
 
     INTEGER :: i, j, k, n
@@ -92,7 +91,7 @@ CONTAINS
     INTEGER :: prof_len, num_var, num_var_meta
     INTEGER :: num_taxa, num_taxa_entries
 
-
+    integer :: var_code(10)
     valid = .TRUE.
 
 
@@ -103,22 +102,15 @@ CONTAINS
        RETURN
     END IF
 
-
-
+    
     ! --------------------------------------------------------------------------
     ! Read primary header
     ! --------------------------------------------------------------------------
 
     ! determine the WOD format, only continue if format is new enough
-    IF(  ascii(1:1) == 'C') THEN
-       ! WOD13, WOD09, WOD05, or WOD01
-       CONTINUE
-       !.OR. &
-       !ascii(1:1) == 'B' .OR. &
-       !ascii(1:1) == 'A'
-    ELSE
-       PRINT *, "ERROR: this appears to be a WOD98 formatted file. "//&
-            " Please download a newer file format"
+    IF(  ascii(1:1) /= 'C') THEN
+       PRINT *, "ERROR: this appears to NOT be a WOD13 formatted file. "//&
+            " Please download a newer file format."
        STOP 1
     END IF
 
@@ -147,11 +139,19 @@ CONTAINS
     tmp_r = readReal(); ! PRINT '(A10, F10.4)', "Lat: ", tmp_r
     tmp_r = readReal(); ! PRINT '(A10, F10.4)', "Lon: ", tmp_r
     num_lvl = readInt();!   PRINT '(A10, I10)', "levels: ", num_lvl
+    ALLOCATE(ob%depth(num_lvl))
     tmp_i = readInt(1); ! PRINT '(A10, I10)', "prof_type: ", tmp_i ! O if 0, S if 1
 
+    
     num_var = readInt(2) ! number of variables
     DO i = 1, num_var
-       tmp_i = readInt() ! variable type code
+       var_code(i) = readInt() ! variable type code
+       if(var_code(i) == 1) then ! temp
+          allocate(ob%temp(num_lvl))
+       else if(var_code(i) == 2) then
+          allocate(ob%salt(num_lvl))
+       end if
+       
        tmp_i = readInt(1) ! variable qc
        num_var_meta = readInt() ! number of var meta data entries
        DO j=1, num_var_meta
@@ -160,7 +160,10 @@ CONTAINS
        END DO
     END DO
 
+    if (.not. allocated(ob%temp)) allocate(ob%temp(0))
+    if (.not. allocated(ob%salt)) allocate(ob%salt(0))
 
+    
     ! --------------------------------------------------------------------------
     ! Read character data and PI header
     ! --------------------------------------------------------------------------
@@ -173,26 +176,18 @@ CONTAINS
     ! --------------------------------------------------------------------------
     ! Secondary header
     ! --------------------------------------------------------------------------
-    tmp_i = readInt() ! second header length
-    IF (tmp_i /= WOD_UNDEF_INT) THEN
-       n = readInt() ! second header entries
-       DO i = 1,n
-          tmp_i = readInt()
-          tmp_r = readReal()
-       END DO
+    n = readInt() ! second header length
+    IF (n /= WOD_UNDEF_INT) THEN
+       pos = pos + n
     END IF
 
 
     ! --------------------------------------------------------------------------
     ! Biological header
     ! --------------------------------------------------------------------------
-    tmp_i = readInt() ! bio header length
-    IF (tmp_i /= WOD_UNDEF_INT) THEN
-       n = readInt() ! bio header entries
-       DO i = 1,n
-          tmp_i = readInt()
-          tmp_r = readReal()
-       END DO
+    n = readInt() ! bio header length
+    IF (n /= WOD_UNDEF_INT) THEN
+       pos = pos + n
     END IF
 
 
@@ -200,19 +195,25 @@ CONTAINS
     ! profile data
     ! --------------------------------------------------------------------------
     do_lvls: DO i=1,num_lvl
-       depth = readReal() ! dpth
-       IF(depth == WOD_UNDEF_REAL) CYCLE do_lvls
-       tmp_i = readInt(1) ! depth err
-       tmp_i = readInt(1) ! depth err o
+       ob%depth(i) = readReal() ! dpth
+!       IF(depth == WOD_UNDEF_REAL) CYCLE do_lvls
+       pos = pos + 2
+!       tmp_i = readInt(1) ! depth err
+!       tmp_i = readInt(1) ! depth err o
 
        do_vars: DO j=1, num_var
           val = readReal() ! val
           IF(val == WOD_UNDEF_REAL) CYCLE do_vars
-          tmp_i = readInt(1) ! val qc
-          tmp_i = readInt(1) ! val qc O
+          pos = pos + 2
+          if(var_code(j) == 1) then
+             ob%temp(i) = val
+          else if(var_code(j) == 2) then
+             ob%salt(i) = val
+          end if
+!          tmp_i = readInt(1) ! val qc
+!          tmp_i = readInt(1) ! val qc O
        END DO do_vars
     END DO do_lvls
-
 
 
   CONTAINS
