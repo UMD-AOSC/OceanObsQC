@@ -75,7 +75,7 @@ CONTAINS
   !-----------------------------------------------------------------------------
   SUBROUTINE read_wod_rec(unit, ob, valid)
     INTEGER, INTENT(in) :: unit
-    type(profile), intent(out) :: ob
+    TYPE(profile), INTENT(out) :: ob
     LOGICAL, INTENT(out) :: valid
 
     INTEGER :: i, j, k, n
@@ -91,7 +91,7 @@ CONTAINS
     INTEGER :: prof_len, num_var, num_var_meta
     INTEGER :: num_taxa, num_taxa_entries
 
-    integer :: var_code(10)
+    INTEGER :: var_code(10)
     valid = .TRUE.
 
 
@@ -102,7 +102,7 @@ CONTAINS
        RETURN
     END IF
 
-    
+
     ! --------------------------------------------------------------------------
     ! Read primary header
     ! --------------------------------------------------------------------------
@@ -132,26 +132,25 @@ CONTAINS
     pos = pos + 2
 
     tmp_i = readInt();  ! PRINT '(A10, I10)', "Cruise: ", tmp_i
-    tmp_i = readInt(4); ! PRINT '(A10, I10)', "Year: ", tmp_i
-    tmp_i = readInt(2); ! PRINT '(A10, I10)', "Month: ", tmp_i
-    tmp_i = readInt(2); ! PRINT '(A10, I10)', "Day: ", tmp_i
-    tmp_r = readReal(); ! PRINT '(A10, F10.4)', "Time: ", tmp_r
-    tmp_r = readReal(); ! PRINT '(A10, F10.4)', "Lat: ", tmp_r
-    tmp_r = readReal(); ! PRINT '(A10, F10.4)', "Lon: ", tmp_r
-    num_lvl = readInt();!   PRINT '(A10, I10)', "levels: ", num_lvl
+    ob%date = readInt(4)*10000 ! year
+    ob%date = ob%date + readInt(2)*100 ! month
+    ob%date = ob%date + readInt(2) ! day
+    ob%hour = readReal()
+    ob%lat = readReal()
+    ob%lon = readReal()
+    num_lvl = readInt()
     ALLOCATE(ob%depth(num_lvl))
     tmp_i = readInt(1); ! PRINT '(A10, I10)', "prof_type: ", tmp_i ! O if 0, S if 1
 
-    
     num_var = readInt(2) ! number of variables
     DO i = 1, num_var
        var_code(i) = readInt() ! variable type code
-       if(var_code(i) == 1) then ! temp
-          allocate(ob%temp(num_lvl))
-       else if(var_code(i) == 2) then
-          allocate(ob%salt(num_lvl))
-       end if
-       
+       IF(var_code(i) == 1) THEN ! temp
+          ALLOCATE(ob%temp(num_lvl))
+       ELSE IF(var_code(i) == 2) THEN
+          ALLOCATE(ob%salt(num_lvl))
+       END IF
+
        tmp_i = readInt(1) ! variable qc
        num_var_meta = readInt() ! number of var meta data entries
        DO j=1, num_var_meta
@@ -160,10 +159,11 @@ CONTAINS
        END DO
     END DO
 
-    if (.not. allocated(ob%temp)) allocate(ob%temp(0))
-    if (.not. allocated(ob%salt)) allocate(ob%salt(0))
+    IF (.NOT. ALLOCATED(ob%temp)) ALLOCATE(ob%temp(0))
+    IF (.NOT. ALLOCATED(ob%salt)) ALLOCATE(ob%salt(0))
+    ob%temp = PROF_UNDEF
+    ob%salt = PROF_UNDEF
 
-    
     ! --------------------------------------------------------------------------
     ! Read character data and PI header
     ! --------------------------------------------------------------------------
@@ -196,22 +196,22 @@ CONTAINS
     ! --------------------------------------------------------------------------
     do_lvls: DO i=1,num_lvl
        ob%depth(i) = readReal() ! dpth
-!       IF(depth == WOD_UNDEF_REAL) CYCLE do_lvls
+       !       IF(depth == WOD_UNDEF_REAL) CYCLE do_lvls
        pos = pos + 2
-!       tmp_i = readInt(1) ! depth err
-!       tmp_i = readInt(1) ! depth err o
+       !       tmp_i = readInt(1) ! depth err
+       !       tmp_i = readInt(1) ! depth err o
 
        do_vars: DO j=1, num_var
           val = readReal() ! val
           IF(val == WOD_UNDEF_REAL) CYCLE do_vars
           pos = pos + 2
-          if(var_code(j) == 1) then
+          IF(var_code(j) == 1) THEN
              ob%temp(i) = val
-          else if(var_code(j) == 2) then
+          ELSE IF(var_code(j) == 2) THEN
              ob%salt(i) = val
-          end if
-!          tmp_i = readInt(1) ! val qc
-!          tmp_i = readInt(1) ! val qc O
+          END IF
+          !          tmp_i = readInt(1) ! val qc
+          !          tmp_i = readInt(1) ! val qc O
        END DO do_vars
     END DO do_lvls
 
