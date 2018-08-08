@@ -3,11 +3,13 @@
 !===============================================================================
 
 &obsqc_nml
-  obs_reader_type="BUFR"
-  obs_writer_type="NC"
+  obs_reader_type="BUFR"  ! options are: BUFR, WOD
+  obs_writer_type="NC"    ! options are: NC
 
-  read_start_date = 20180710
-  read_end_date   = 20180711
+  ! only keep profiles between these dates (YYYYMMDD)
+  ! if commented out, all dates are kept
+!  read_start_date = 20070710
+!  read_end_date   = 20070711
 /
 
 

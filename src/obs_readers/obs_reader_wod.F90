@@ -20,7 +20,10 @@ MODULE obs_reader_wod_mod
   REAL :: WOD_UNDEF_REAL = -9.99e36
   INTEGER :: WOD_UNDEF_INT = -999.9
 
+
+
 CONTAINS
+
 
 
   !=============================================================================
@@ -92,6 +95,7 @@ CONTAINS
     INTEGER :: num_taxa, num_taxa_entries
 
     INTEGER :: var_code(10)
+    CHARACTER*2 :: cc
     valid = .TRUE.
 
 
@@ -124,23 +128,32 @@ CONTAINS
        READ(unit, '(a80)') ascii((i-1)*80+1 : i*80)
     END DO
 
-    ! get cast number
-    tmp_i = readInt(); !   PRINT '(A10, I10)', "Cast: ", tmp_i
+    ! start parsing data
+    !--------------------------------------------------------------------------
 
-    ! country code (ignore)
-    !PRINT *, "Country: ", ascii(pos:pos+1)
-    pos = pos + 2
+    tmp_i = readInt() ! WOD cast number
 
-    tmp_i = readInt();  ! PRINT '(A10, I10)', "Cruise: ", tmp_i
-    ob%date = readInt(4)*10000 ! year
-    ob%date = ob%date + readInt(2)*100 ! month
-    ob%date = ob%date + readInt(2) ! day
-    ob%hour = readReal()
-    ob%lat = readReal()
-    ob%lon = readReal()
-    num_lvl = readInt()
+    ! platform ID is combo of country code and cruise number
+    cc = ascii(pos:pos+1); pos = pos + 2 ! country code
+    tmp_i = readInt() ! WOD cruise number
+    WRITE (ob%id, '(A2,I0)')  cc, tmp_i
+
+    ! year, month, day as single integer
+    ob%date = &
+         readInt(4)*10000 + & ! year
+         readInt(2)*100 + &   ! month
+         readInt(2)           ! day
+
+    ! hour. Replace with 12Z if no hour is given (likely due to daily averaging)
+    ob%hour = readReal() ! hour, fractional
+    IF(ob%hour == PROF_UNDEF) ob%hour = 12.0
+
+    ob%lat = readReal() ! latitude
+    ob%lon = readReal() ! longitude
+
+    num_lvl = readInt() ! number of vertical levels
     ALLOCATE(ob%depth(num_lvl))
-    tmp_i = readInt(1); ! PRINT '(A10, I10)', "prof_type: ", tmp_i ! O if 0, S if 1
+    tmp_i = readInt(1); ! profile level type,  0=OBS, 1=STD
 
     num_var = readInt(2) ! number of variables
     DO i = 1, num_var
@@ -164,12 +177,34 @@ CONTAINS
     ob%temp = PROF_UNDEF
     ob%salt = PROF_UNDEF
 
+
     ! --------------------------------------------------------------------------
     ! Read character data and PI header
     ! --------------------------------------------------------------------------
     n = readInt() ! character data length
-    IF (n /= WOD_UNDEF_INT) THEN
-       pos = pos + n
+    IF (n /= WOD_UNDEF_INT .AND. n/= 0) THEN
+       DO n=1, readInt(1) ! number of entries
+          SELECT CASE(readInt(1))
+
+          CASE(1) ! cruise ID from originator
+             i = readInt(2)
+             !ob%id = ascii(pos:pos+i-1)
+             ! shouldn't need this?? unless need ID to match with other
+             ! data sources
+             pos = pos + i
+
+          CASE(2) ! cast ID from originator
+             i = readInt(2)
+             pos = pos + i
+
+          CASE(3) ! PI
+             DO j=1, readInt(2) !num of PI names
+                i = readInt() ! var code
+                i = readInt() ! bytes in name
+                pos = pos + i
+             END DO
+          END SELECT
+       END DO
     END IF
 
 
@@ -177,8 +212,13 @@ CONTAINS
     ! Secondary header
     ! --------------------------------------------------------------------------
     n = readInt() ! second header length
-    IF (n /= WOD_UNDEF_INT) THEN
+    IF (n /= WOD_UNDEF_INT .AND. n /= 0) THEN
+       ! don't bother reading this header
        pos = pos + n
+       ! DO n = 1, readInt() ! number of entries
+       !    tmp_i = readInt() ! header code
+       !    tmp_r = readReal() ! value
+       ! END DO
     END IF
 
 
@@ -186,7 +226,8 @@ CONTAINS
     ! Biological header
     ! --------------------------------------------------------------------------
     n = readInt() ! bio header length
-    IF (n /= WOD_UNDEF_INT) THEN
+    IF (n /= WOD_UNDEF_INT .AND. n/= 0) THEN
+       ! don't bother reading this header
        pos = pos + n
     END IF
 

@@ -15,7 +15,7 @@ MODULE profile_mod
   !! and no salinity, SIZE(salt) will return 0, and SIZE(temp) == SIZE(depth) )
   !-----------------------------------------------------------------------------
   TYPE, PUBLIC :: profile
-     CHARACTER(8) :: id !< callsign of the platform
+     CHARACTER(10) :: id!< unique ID for the platform / ship
      REAL(8) :: lat     !< latitude (degrees)
      REAL(8) :: lon     !< longitude (degrees)
      INTEGER :: date    !< year, month, day (YYYYMMDD)
