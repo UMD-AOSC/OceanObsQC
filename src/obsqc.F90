@@ -46,8 +46,11 @@ PROGRAM obsqc
   ! variables that are read in from the namelist
   CHARACTER(:), ALLOCATABLE :: obs_reader_type
   CHARACTER(:), ALLOCATABLE :: obs_writer_type
+  INTEGER :: read_start_date = 0
+  INTEGER :: read_end_date   = 99999999
 
-  NAMELIST /obsqc_nml/ obs_reader_type, obs_writer_type
+  NAMELIST /obsqc_nml/ obs_reader_type, obs_writer_type, &
+       read_start_date, read_end_date
 
   PRINT *, ""
   PRINT *, "==================================================================="
@@ -129,7 +132,8 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Reading profiles"
   PRINT *, "---------------------------------------------"
-  CALL selected_obs_reader%get(TRIM(in_filename), obs)
+  CALL selected_obs_reader%get(TRIM(in_filename), &
+       read_start_date, read_end_date, obs)
   CALL prof_stats(obs)
   PRINT *, ""
   PRINT *, ""

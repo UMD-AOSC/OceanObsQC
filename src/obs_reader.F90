@@ -53,10 +53,13 @@ CONTAINS
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
-  SUBROUTINE obs_reader_get(self, filename, obs)
+  SUBROUTINE obs_reader_get(self, filename, start_date, end_date, obs)
     CLASS(obs_reader), INTENT(in)  :: self
     CHARACTER(len=*),  INTENT(in)  :: filename
+    INTEGER,           INTENT(in)  :: start_date
+    INTEGER,           INTENT(in)  :: end_date
     TYPE(vec_profile), INTENT(out) :: obs
+
 
     TYPE(vec_profile) :: obs_in
     TYPE(profile) :: ob
@@ -74,6 +77,9 @@ CONTAINS
     ! for each profile
     DO i=1,obs_in%SIZE()
        ob = obs_in%get(i)
+
+       ! dont use if not within desired date range
+       IF(ob%date < start_date .OR. ob%date > end_date) CYCLE
 
        ! if no valid temperature, remove entire array
        IF(MAXVAL(ob%temp) == MINVAL(ob%temp) .AND. ob%temp(1) == PROF_UNDEF) THEN
