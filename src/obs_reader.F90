@@ -98,8 +98,15 @@ CONTAINS
        ! remove levels that have undefined depth, or no values
        j=0
        DO k=1,SIZE(ob%depth)
-          vSalt = SIZE(ob%salt) >= k .AND. ob%salt(k) < PROF_UNDEF
-          vTemp = SIZE(ob%temp) >= k .AND. ob%temp(k) < PROF_UNDEF
+          ! is the salinity valid at this leve?
+          vSalt = SIZE(ob%salt) >= k 
+          if (vSalt) vSalt =  ob%salt(k) < PROF_UNDEF
+
+          ! is the temperature valid at this level?
+          vTemp = SIZE(ob%temp) >= k
+          if (vTemp) vTemp =  ob%temp(k) < PROF_UNDEF
+
+          ! if valid temp or salinity..AND valid depth
           IF ( (vSalt .OR. vTemp) .AND. ob%depth(k) < PROF_UNDEF) THEN
              j = j + 1
              ob%depth(j) =ob%depth(k)
