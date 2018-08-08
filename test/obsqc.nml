@@ -41,3 +41,11 @@
   max_start=36.0    ! first level must be above this depth (meters)
   max_gap=500.0     ! no vertical gaps larger than this allowed (meters)
 /
+
+
+&qc_density
+  ! If a profile has both salinity and temperature, check to make sure that
+  ! there is not a density inversion in subsequent levels
+
+  dens_inv_tol = 0.1 ! tolerance when detecting density inversions (kg/m^3)
+/
