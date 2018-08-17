@@ -31,9 +31,10 @@ PROGRAM obsqc
 
   CHARACTER(len=1024) :: in_filename
   CHARACTER(len=1024) :: out_filename
+  CHARACTER(len=1024) :: rej_filename
 
   INTEGER :: i, nmlfile
-  TYPE(vec_profile) :: obs, obs2
+  TYPE(vec_profile) :: obs, obs2, obs3
   TYPE(profile) :: ob
 
   TYPE(obs_reader_ptr) :: obs_reader_wrapper
@@ -65,6 +66,7 @@ PROGRAM obsqc
   CALL get_command_ARGUMENT(1, VALUE=in_filename)
   CALL get_command_ARGUMENT(2, VALUE=out_filename)
 
+  rej_filename=trim('rej_') // trim(out_filename)
 
   ! open the namelist file
   ! grab the main parameters we need
@@ -141,6 +143,7 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   DO i=1, qc_steps%SIZE()
      obs2 = vec_profile()
+   ! obs3 = vec_profile()
      qc_step_wrapper = qc_steps%get(i)
 
      PRINT *, ""
@@ -153,7 +156,7 @@ PROGRAM obsqc
      CALL qc_step_wrapper%p%init(nmlfile)
 
      ! perform the QC step
-     CALL qc_step_wrapper%p%check(obs, obs2)
+     CALL qc_step_wrapper%p%check(obs, obs2, obs3)
 
      ! get ready for next cycle
      obs = obs2
@@ -169,6 +172,9 @@ PROGRAM obsqc
   call prof_stats(obs)
   CALL selected_obs_writer%obs_write(out_filename, obs)
 
+  !-- write out rejected data
+  call prof_stats(obs3)
+  CALL selected_obs_writer%obs_write(rej_filename, obs3)
 
   
 contains

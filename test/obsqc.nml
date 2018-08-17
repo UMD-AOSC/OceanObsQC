@@ -18,3 +18,31 @@
   max_start=36.0    ! first level must be above this depth (meters)
   max_gap=500.0     ! no vertical gaps larger than this allowed (meters)
 /
+
+&qc_global
+ ! Check for max off-set from regional and global climate
+
+ do_qc_global=T     ! Check for max off-set from regional and global climate
+ cobs_cord = "SPHERICAL"
+ cobs_dx = 0.25
+ cobs_dy = 0.25
+ cobs_x0 = -179.875
+ cobs_y0 = -89.875
+ cobs_fmax = 2
+ cobs_gros_sdv = 7.0
+ cobs_gros_min_T = 0.5
+ cobs_T_file="TRANS-WOA13-T.nc"
+ cobs_S_file="TRANS-WOA13-S.nc"
+ cobs_TSOFF_file="TRANS-WOA13-TS-SDV-sm1-ann.nc"
+ cobs_lon_dim="imp"
+ cobs_lat_dim="jmp"
+ cobs_dep_dim="kmp"
+ cobs_mon_dim="Time"
+ cobs_lon_var="lon"
+ cobs_lat_var="lat"
+ cobs_dep_var="depth"
+ cobs_temp_var="temp"
+ cobs_salt_var="salt"
+ cobs_toff_var="tsdv"
+ cobs_soff_var="ssdv"
+/

@@ -10,6 +10,7 @@ set(PLUGINS
   qc_vrt_avg
   qc_time_avg
   qc_depths
+  qc_global
   )
 
 
