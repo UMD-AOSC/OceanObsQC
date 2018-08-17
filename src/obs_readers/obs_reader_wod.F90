@@ -99,6 +99,10 @@ CONTAINS
     valid = .TRUE.
 
 
+    ! initialize observatino
+    ob%plat = PLAT_UNKNOWN
+
+
     ! read the first line
     READ(unit, '(a80)', iostat=i) ascii
     IF (i /= 0) THEN
@@ -213,12 +217,22 @@ CONTAINS
     ! --------------------------------------------------------------------------
     n = readInt() ! second header length
     IF (n /= WOD_UNDEF_INT .AND. n /= 0) THEN
-       ! don't bother reading this header
-       pos = pos + n
-       ! DO n = 1, readInt() ! number of entries
-       !    tmp_i = readInt() ! header code
-       !    tmp_r = readReal() ! value
-       ! END DO
+       DO n = 1, readInt() ! number of entries
+          tmp_i = readInt() ! header code
+          tmp_r = readReal() ! value
+
+          IF(tmp_i == 29) THEN ! probe type
+             SELECT CASE(INT(tmp_r))
+             CASE (1,2,3) ! MBT, XBT, DBT
+                ob%plat = PLAT_BATHY
+             CASE (10, 11) ! buoy - moored, drifting
+                ob%plat = PLAT_BUOY
+             CASE (9, 13) ! profiling float, animal mounted
+                ob%plat = PLAT_FLOAT
+             END SELECT
+
+          END IF
+       END DO
     END IF
 
 

@@ -77,10 +77,15 @@ CONTAINS
 
           ! read in the profiles, in a way depending on the profile type
           valid = .FALSE.
-          IF (c1 == "NC031001" .OR. c1 == "NC031002") THEN
+          IF (c1 == "NC031001") THEN
              CALL process_bathytesac(file, ob, valid)
+             ob%plat = PLAT_BATHY
+          ELSE IF (c1 == "NC031002") THEN
+             CALL process_bathytesac(file, ob, valid)
+             ob%plat = PLAT_BUOY
           ELSE IF(c1 == "NC031005") THEN
              CALL process_float(file, ob, valid)
+             ob%plat = PLAT_FLOAT
           ELSE
              PRINT *, "WARN: unknown ob type: ", c1
              STOP 1
