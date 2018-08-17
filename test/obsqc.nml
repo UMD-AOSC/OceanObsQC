@@ -1,8 +1,31 @@
+!===============================================================================
+! Overall program configuration
+!===============================================================================
+
 &obsqc_nml
-  obs_reader_type="BUFR"
-  obs_writer_type="NC"
+  obs_reader_type="BUFR"  ! options are: BUFR, WOD
+  obs_writer_type="NC"    ! options are: NC
+
+  ! only keep profiles between these dates (YYYYMMDD)
+  ! if commented out, all dates are kept
+!  read_start_date = 20070710
+!  read_end_date   = 20070711
 /
 
+
+
+!===============================================================================
+! Obs reader / writer configuration
+!===============================================================================
+
+&obs_reader_wod
+/
+
+
+
+!===============================================================================
+! QC step configurations
+!===============================================================================
 
 &qc_depths
   ! Check for proper monotonically increasing depths, with sufficient levels.

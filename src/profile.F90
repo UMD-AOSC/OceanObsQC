@@ -15,7 +15,7 @@ MODULE profile_mod
   !! and no salinity, SIZE(salt) will return 0, and SIZE(temp) == SIZE(depth) )
   !-----------------------------------------------------------------------------
   TYPE, PUBLIC :: profile
-     CHARACTER(8) :: id !< callsign of the platform
+     CHARACTER(10) :: id!< unique ID for the platform / ship
      REAL(8) :: lat     !< latitude (degrees)
      REAL(8) :: lon     !< longitude (degrees)
      INTEGER :: date    !< year, month, day (YYYYMMDD)
@@ -23,6 +23,11 @@ MODULE profile_mod
      REAL, ALLOCATABLE :: depth(:)  !< depth of each level (m)
      REAL, ALLOCATABLE :: salt(:)   !< salinity of each level (PSU)
      REAL, ALLOCATABLE :: temp(:)   !< temperature (C)
+
+   CONTAINS
+
+     PROCEDURE :: PRINT => profile_print
+
   END TYPE profile
   !=============================================================================
 
@@ -30,6 +35,30 @@ MODULE profile_mod
   ! used in the salt or temp variables to indicate there is no recorded
   ! value for that level
   REAL, PARAMETER, PUBLIC :: PROF_UNDEF = 1.0e10
+
+
+CONTAINS
+
+
+  SUBROUTINE profile_print(self)
+    CLASS(profile), INTENT(in) :: self
+    INTEGER :: i
+
+    REAL :: v1, v2
+    PRINT *, "id:   ", self%id
+    PRINT *, "date: ", self%date
+    PRINT *, "hour: ", self%hour
+    PRINT *, "lat:  ", self%lat
+    PRINT *, "lon:  ", self%lon
+
+    DO i =1, SIZE(self%depth)
+       v1 = MERGE(self%temp(i), PROF_UNDEF, SIZE(self%temp)>=i)
+       v2 = MERGE(self%salt(i), PROF_UNDEF, SIZE(self%salt)>=i)
+       PRINT '(I5, F8.2, F10.3, F10.3)', i, self%depth(i), v1, v2
+    END DO
+
+  END SUBROUTINE profile_print
+
 
 END MODULE profile_mod
 !===============================================================================

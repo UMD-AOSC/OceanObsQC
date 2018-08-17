@@ -100,8 +100,8 @@ CONTAINS
           
           obs_len = merge(SIZE(prf%temp), size(prf%salt), j==1)
           prf_obslen(p) = obs_len
-          obs_depth(obs_offset:obs_offset+obs_len) = prf%depth
-          obs_val(obs_offset:obs_offset+obs_len) = merge(prf%temp, prf%salt, j==1)
+          obs_depth(obs_offset:obs_offset+obs_len-1) = prf%depth
+          obs_val(obs_offset:obs_offset+obs_len-1) = merge(prf%temp, prf%salt, j==1)
           obs_offset = obs_offset + obs_len
        end do
     END DO
