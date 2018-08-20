@@ -59,6 +59,15 @@ CONTAINS
     REAL,    ALLOCATABLE :: obs_val(:)
 
 
+    ! The netCDF file can't handle 0 observations
+    IF(obs%SIZE() == 0) THEN
+       PRINT *, ""
+       PRINT *, "WARNING: cannot write an output file in NetCDF format..."
+       PRINT *, "There are NO profiles to save."
+       RETURN
+    END IF
+
+
     ! go through once and count the number of observations/profiles that will be produced
     prf_count = 0
     obs_count = 0
