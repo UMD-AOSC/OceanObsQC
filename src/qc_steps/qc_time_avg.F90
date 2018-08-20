@@ -21,6 +21,11 @@ MODULE qc_time_avg_mod
   !=============================================================================
 
 
+  ! parameters to be read in from the namelist
+  REAL :: max_dist = 50e3 !< max horizontal distance for averaging to occur (meters)
+
+  REAL :: time_bin = 24    !< size of time bin (hours). TODO: fix this
+
 CONTAINS
 
 
@@ -78,22 +83,123 @@ CONTAINS
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
 
-    INTEGER :: i
-    TYPE(profile) :: prof_in, prof_out
+    REAL, PARAMETER :: re = 6371.3d3 !< radius of earth (meters)
+    REAL, PARAMETER :: deg2rad = 4.0*ATAN(1.0)/180.0!< multiply by to convert degrees to radians
 
-    PRINT *, "NOTE: not yet implemented"
+    TYPE(profile), POINTER :: prof1, prof2
+    LOGICAL, ALLOCATABLE :: prof_valid (:)
+    INTEGER, ALLOCATABLE :: prof_avg(:)
+    INTEGER :: prof_avg_num
 
-    DO i = 1, obs_in%SIZE()
-       prof_in = obs_in%get(i)
+    REAL :: clat, slat, hz_dist, t_dist
 
-       ! This is where the special checks would be done
-       ! For now, take the profile the way it is.
-       prof_out = prof_in
+    INTEGER :: i,j
+    INTEGER :: rm_count
 
-       CALL obs_out%push_back(prof_out)
-    END DO
+    rm_count = 0
+
+    ALLOCATE(prof_valid(obs_in%SIZE()))
+    prof_valid = .TRUE.
+    ALLOCATE(prof_avg(obs_in%SIZE()))
+    prof_avg_num = 0
+
+    outer: DO i=1, obs_in%SIZE()
+       ! if this profile has already been used in the averaging of a previous
+       ! profile, skip it
+       IF(.NOT. prof_valid(i)) CYCLE outer
+
+       prof1 => obs_in%of(i)
+
+       prof_avg_num = 1
+       prof_avg(prof_avg_num) = i
+       clat = COS(prof1%lat * deg2rad)
+       slat = SIN(prof1%lat * deg2rad)
+
+       inner: DO j= i+1, obs_in%SIZE()
+          IF(.NOT. prof_valid(j)) CYCLE inner
+
+          prof2 => obs_in%of(j)
+
+          ! make sure same profile ID
+          ! TODO, don't average if a generic '0' or SHIP id
+          IF (prof1%id /= prof2%id) CYCLE inner
+
+          ! calc distance between points
+          hz_dist = re * ACOS(MIN(&
+               slat*SIN(prof2%lat*deg2rad) + &
+               clat*COS(prof2%lat*deg2rad)*COS((prof2%lon-prof1%lon)*deg2rad),&
+               1.0))
+
+          ! temporal distance
+          t_dist = deltaDates(prof1%date, prof2%date)*24 - 12 + prof2%hour
+
+          IF (hz_dist < max_dist .AND. ABS(t_dist) <= 12) THEN
+             prof_avg_num = prof_avg_num + 1
+             prof_avg(prof_avg_num) = j
+          END IF
+       END DO inner
+
+       rm_count = rm_count + prof_avg_num - 1
+       IF(prof_avg_num > 1) THEN
+          ! mark all the profiles listed so that they aren't used again
+          DO j=1,prof_avg_num
+             prof_valid(prof_avg(j)) = .FALSE.
+          END DO
+
+          ! TODO, do the actual averaging
+          ! for now just using the first ob
+          CALL obs_out%push_back(prof1)
+       ELSE
+          CALL obs_out%push_back(prof1)
+       END IF
+    END DO outer
+
+
+    DEALLOCATE(prof_valid, prof_avg)
+    IF(rm_count > 0)&
+         PRINT '(I8,A)', rm_count, ' profiles removed for temporal/hz averaging'
 
   END SUBROUTINE qc_step_check
   !=============================================================================
+
+
+  !> returns the number of days between two dates
+  !> @param date1  first date, in YYYYMMDD form
+  !> @param date2  second date, in YYYYMMDD form
+  FUNCTION deltaDates(date1, date2) RESULT(days)
+    INTEGER, INTENT(in) :: date1, date2
+    INTEGER :: days
+
+    INTEGER :: y, m, d
+    INTEGER :: jd1, jd2
+
+
+    ! get the julian date number of date 1
+    y = INT(date1/10000)
+    m = INT((date1-y*10000)/100)
+    d = date1-y*10000-m*100
+    jd1 = julianDate(y,m,d)
+
+    ! get the julian date number of date 2
+    y = INT(date2/10000)
+    m = INT((date2-y*10000)/100)
+    d = date2-y*10000-m*100
+    jd2 = julianDate(y,m,d)
+
+    days = jd2-jd1
+
+  END FUNCTION deltaDates
+
+
+
+  !> get a julian day number from gregorian date
+  PURE FUNCTION julianDate(Y,M,D) RESULT(jd)
+    INTEGER, INTENT(in) :: y, m, d
+    INTEGER :: jd
+
+    jd = (1461*(y+4800+(m-14)/12))/4 + (367*(m-2-12*((m-14)/12)))/12 &
+         - (3*((y+4900+(m-14)/12)/100))/4 + D - 32075
+  END FUNCTION julianDate
+
 
 END MODULE qc_time_avg_mod
