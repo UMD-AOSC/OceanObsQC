@@ -44,12 +44,9 @@ CONTAINS
     TYPE(vec_profile), INTENT(inout) :: obs
 
     LOGICAL :: valid
-    TYPE(profile) :: ob, ob2
+    TYPE(profile) :: ob
     INTEGER :: file, idate, iret
     CHARACTER*8 c1
-
-    TYPE(profile), ALLOCATABLE :: prf(:)
-    INTEGER ::cnt
 
     ! make sure input file exists
     INQUIRE(file=filename, exist=valid)
@@ -65,7 +62,6 @@ CONTAINS
     CALL datelen(10)
 
     ! process each profile
-    cnt = 0
     iret = 0
     DO
        CALL readmg(file, c1, idate, iret)
@@ -99,7 +95,6 @@ CONTAINS
 
           ! valid ob found, save to list
           CALL obs%push_back(ob)
-          IF(valid) cnt = cnt + 1
 
        END DO
     END DO

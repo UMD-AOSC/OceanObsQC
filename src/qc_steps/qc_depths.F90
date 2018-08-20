@@ -95,7 +95,7 @@ CONTAINS
     TYPE(vec_profile), INTENT(inout) :: obs_out
 
     INTEGER :: i, j
-    TYPE(profile) :: prof
+    TYPE(profile), POINTER :: prof
 
     INTEGER :: bad_minpoints, bad_maxdepth, bad_nonmono, bad_deepstart, &
          bad_largegap
@@ -108,7 +108,7 @@ CONTAINS
 
     ! check each profile
     each_profile: DO i = 1, obs_in%SIZE()
-       prof = obs_in%get(i)
+       prof => obs_in%of(i)
 
 
        ! remove if profile does not have enough levels

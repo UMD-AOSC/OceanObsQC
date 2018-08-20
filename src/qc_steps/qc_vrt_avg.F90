@@ -79,18 +79,17 @@ CONTAINS
     TYPE(vec_profile), INTENT(inout) :: obs_out
 
     INTEGER :: i
-    TYPE(profile) :: prof_in, prof_out
+    TYPE(profile), POINTER :: prof
 
     PRINT *, "NOTE: not yet implemented"
 
     DO i = 1, obs_in%SIZE()
-       prof_in = obs_in%get(i)
+       prof => obs_in%of(i)
 
        ! This is where the special checks would be done
        ! For now, take the profile the way it is.
-       prof_out = prof_in
 
-       CALL obs_out%push_back(prof_out)
+       CALL obs_out%push_back(prof)
     END DO
 
   END SUBROUTINE qc_step_check
