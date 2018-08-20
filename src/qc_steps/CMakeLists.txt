@@ -7,6 +7,7 @@
 # The plugins are executed in the order that they are given below
 #-------------------------------------------------------------------------------
 set(PLUGINS
+  qc_duplicate
   qc_vrt_avg
   qc_time_avg
   qc_depths
