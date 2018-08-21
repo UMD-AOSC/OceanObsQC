@@ -33,6 +33,7 @@ PROGRAM obsqc
   CHARACTER(len=1024) :: out_filename
 
   INTEGER :: i, nmlfile
+  REAL :: timer_start, timer_end
   TYPE(vec_profile) :: obs, obs2
 
   TYPE(obs_reader_ptr) :: obs_reader_wrapper
@@ -131,10 +132,13 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Reading profiles"
   PRINT *, "---------------------------------------------"
+  CALL cpu_TIME(timer_start)
   CALL selected_obs_reader%get(TRIM(in_filename), &
        read_start_date, read_end_date, obs)
   CALL prof_stats(obs)
+  CALL cpu_TIME(timer_end)
   PRINT *, ""
+  PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
   PRINT *, ""
 
 
@@ -143,6 +147,7 @@ PROGRAM obsqc
   PRINT *, "Running QC step plugins"
   PRINT *, "---------------------------------------------"
   DO i=1, qc_steps%SIZE()
+     CALL cpu_TIME(timer_start)
      obs2 = vec_profile()
      qc_step_wrapper = qc_steps%get(i)
 
@@ -160,6 +165,10 @@ PROGRAM obsqc
 
      ! get ready for next cycle
      obs = obs2
+     CALL cpu_TIME(timer_end)
+     PRINT *, ""
+     PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
+     PRINT *, ""
   END DO
 
 
@@ -169,8 +178,13 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Writing profiles"
   PRINT *, "---------------------------------------------"
+  CALL cpu_TIME(timer_start)
   CALL prof_stats(obs)
   CALL selected_obs_writer%obs_write(out_filename, obs)
+  CALL cpu_TIME(timer_end)
+  PRINT *, ""
+  PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
+  PRINT *, ""
 
 
 
