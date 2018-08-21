@@ -9,9 +9,9 @@
 set(PLUGINS
   qc_duplicate
   qc_vrt_avg
-  qc_time_avg
   qc_depths
   qc_density
+  qc_time_avg
   )
 
 

@@ -12,6 +12,7 @@ add_executable( obsqc ${obsqc_srcs})
 add_subdirectory(obs_readers)
 add_subdirectory(obs_writers)
 add_subdirectory(qc_steps)
+add_subdirectory(util)
 
 
 

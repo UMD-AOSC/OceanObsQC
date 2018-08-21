@@ -7,6 +7,7 @@ MODULE qc_duplicate_mod
   USE qc_step_mod
   USE profile_mod
   USE vec_profile_mod
+  USE prof_sort_mod
 
   IMPLICIT NONE
   PRIVATE
@@ -84,34 +85,65 @@ CONTAINS
     TYPE(profile), POINTER :: prof1, prof2
 
     INTEGER :: count
+    INTEGER, ALLOCATABLE :: sortidx(:)
+    LOGICAL, ALLOCATABLE :: valid(:)
 
-    count = 0
 
-    outer: DO i = 1, obs_in%SIZE()
-       prof1 => obs_in%of(i)
+    ! sort profiles in order of id.
+    ! this speeds up the next section of the code by greatly reducing the
+    ! number of other profiles (prof2) that a given profile (prof1) needs to
+    ! be compared to
+    CALL profSort(obs_in, sortidx, PROF_SORT_ID)
 
-       inner: DO j = i+1, obs_in%SIZE()
-          prof2 => obs_in%of(j)
+    ! traverse the sorted list, and mark subsequent duplicates as invalid
+    ALLOCATE(valid(SIZE(sortidx)))
+    valid = .TRUE.
+    outer: DO i = 1, SIZE(sortidx)
+       ! already marked as invalid, abort this cycle
+       IF(.NOT. valid(sortidx(i))) CYCLE outer
 
-          IF( prof1%id /= prof2%id ) CYCLE inner
+       prof1 => obs_in%of(sortidx(i))
+
+       ! compare prof1 to every other profile after it.
+       ! once we find a profile with a different ID, we can exit the loop
+       inner: DO j = i+1, SIZE(sortidx)
+          IF(.NOT. valid(sortidx(j))) CYCLE
+
+          prof2 => obs_in%of(sortidx(j))
+
+          ! if ID is different, then there are no more profiles with the same id
+          ! (since the list was sorted by id)
+          IF( prof1%id /= prof2%id ) EXIT inner
+
+          ! see if the fields we care about are identical
+          IF( prof1%date /= prof2%date) CYCLE inner
           IF( ABS(prof1%lat - prof2%lat) > 0.001) CYCLE inner
           IF( ABS(prof1%lon - prof2%lon) > 0.001) CYCLE inner
-          IF( prof1%date /= prof2%date) CYCLE inner
           IF( ABS(prof1%hour - prof2%hour) > 0.01) CYCLE inner
-          IF( prof1%plat /= prof1%plat) CYCLE inner
+          IF( prof1%plat /= prof2%plat) CYCLE inner
           IF( SIZE(prof1%depth) /= SIZE(prof2%depth) ) CYCLE inner
           IF( SIZE(prof1%temp) /= SIZE(prof2%temp) ) CYCLE inner
           IF( SIZE(prof1%salt) /= SIZE(prof2%salt) ) CYCLE inner
 
           ! if we made it this far, then prof1 and prof2 are identical
-          ! skip to the next profile to check
-          count = count + 1
-          CYCLE outer
+          valid(sortidx(j)) = .FALSE.
        END DO inner
-
-       CALL obs_out%push_back(prof1)
     END DO outer
 
+    ! only add the valid profiles back to the output list.
+    ! and count up the number of profiles that are removed
+    count = 0
+    DO i =1,SIZE(valid)
+       IF(valid(i)) THEN
+          prof1 => obs_in%of(i)
+          CALL obs_out%push_back(prof1)
+       ELSE
+          count = count + 1
+       END IF
+    END DO
+
+
+    ! print out stats if any profiles were removed
     IF(count > 0)&
          PRINT '(I8,A)', count, ' duplicate profiles removed'
 
