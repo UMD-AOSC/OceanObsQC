@@ -42,6 +42,7 @@ MODULE qc_global_mod
   real, public :: cobs_x0 = -179.87                         ! first grid longitude
   real, public :: cobs_y0 = -89.875                         ! first grid latitude
   real, public :: cobs_gros_min_T = 1.0                     ! min temperature of the gross off set check
+  real, public :: cobs_gros_max_T = 10.0                     ! min temperature of the gross off set check
   integer, public :: cobs_fmax = 2                          ! max number of serching sea grid in function sphgrid_lalo2xy
   real, public :: cobs_gros_sdv = 3.0                       ! max number of SDV range for the gross check
   integer, public :: cobs_nx                                ! x- dimension of cobs
@@ -113,7 +114,7 @@ CONTAINS
 
     NAMELIST /qc_global/ do_qc_global, &
       cobs_cord, cobs_dx, cobs_dy, cobs_x0, cobs_y0, & 
-      cobs_fmax, cobs_gros_sdv, cobs_gros_min_T, &
+      cobs_fmax, cobs_gros_sdv, cobs_gros_min_T, cobs_gros_max_T, &
       cobs_T_file, cobs_S_file, cobs_TSOFF_file, &
       cobs_lon_dim,cobs_lat_dim,cobs_dep_dim,cobs_mon_dim, &
       cobs_lon_var,cobs_lat_var,cobs_dep_var, &
@@ -282,7 +283,7 @@ CONTAINS
              if (abs(cobs_temp(x,y,btma,mon)) <= nbig) exit
           enddo 
           !--- Interpolate to obs depth
-          !--- Need to check if obs T is PoT or in-situ T
+          !--- obs T is in-situ T
           cobs_tspl = cspline(cobs_dep(:btma), cobs_temp(x,y,:btma,mon))
           cobs_tinp = cobs_tspl%interp(prof%depth, check=.true.)
           !--- toff
@@ -295,8 +296,8 @@ CONTAINS
           cobs_tinp_off = cobs_tspl_off%interp(prof%depth, check=.true.)
           !==> gross check, 
           do k = 1, size(prof%depth)
-             cdif = abs(prof%temp(k)-cobs_tinp(k))
-             coff = max(cobs_gros_min_T, cobs_gros_sdv* cobs_tinp_off(k)) 
+             cdif = min(cobs_gros_max_T, abs(prof%temp(k)-cobs_tinp(k)))
+             coff = max(cobs_gros_min_T, cobs_gros_sdv*cobs_tinp_off(k)) 
              if (cdif > coff) then
                 bad_gb_gross = bad_gb_gross + 1
                 prof%hour=51.0
@@ -305,10 +306,13 @@ CONTAINS
              endif
           enddo ! k = 1, size(prof%depth)
           !-- dbg
-          if (mod(i,300) == 0) PRINT *, 'IN qc_global , i= ', &
-              size(cobs_tinp), size(prof%temp),btma,btmb, &
-          !    cobs_tinp, prof%temp, cobs_temp(x,y,:btma,mon), &
-              cobs_tinp_off, cobs_toff(x,y,:btmb)
+          PRINT *, 'IN qc_global , i= ',  &
+                prof%id
+         !if (mod(i,300) == 0) PRINT *, 'IN qc_global , i= ', &
+         !    size(cobs_tinp), size(prof%temp),btma,btmb, &
+         !    prof%id,prof%lon,prof%lat,prof%date,prof%hour, &
+         !!    cobs_tinp, prof%temp, cobs_temp(x,y,:btma,mon), &
+         !    cobs_tinp_off, cobs_toff(x,y,:btmb)
 
        else ! (ck_srch)
           bad_gb_outbound = bad_gb_outbound + 1

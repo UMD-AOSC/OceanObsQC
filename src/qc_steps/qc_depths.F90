@@ -38,7 +38,7 @@ MODULE qc_depths_mod
 
 CONTAINS
 
-
+  !==> 2018-08-20 :: in obs_in has platform type  (bathy, tesac, float)
 
   !=============================================================================
   !> A short (~8 char) unique name for this QC plugin.
@@ -143,7 +143,7 @@ CONTAINS
        each_lvl: DO j=2,SIZE(prof%depth)
 
           ! check for non-monotonic depths
-          IF (check_nonmono .AND. prof%depth(j) < prof%depth(j-1)) THEN
+          IF (check_nonmono .AND. prof%depth(j) <= prof%depth(j-1)) THEN
              bad_nonmono = bad_nonmono + 1
              prof%hour=34.0
              CALL obs_rej%push_back(prof)          

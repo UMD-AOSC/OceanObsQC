@@ -37,7 +37,7 @@
   !  individual test
 
   min_levels=3      ! minimum number of vertical levels required
-  max_depth=7000.0  ! maximum depth allowed (meters)
+  max_depth=5000.0  ! maximum depth allowed (meters)
   max_start=36.0    ! first level must be above this depth (meters)
   max_gap=500.0     ! no vertical gaps larger than this allowed (meters)
 /
@@ -53,7 +53,8 @@
  cobs_y0 = -89.875
  cobs_fmax = 2
  cobs_gros_sdv = 7.0
- cobs_gros_min_T = 0.5
+ cobs_gros_min_T = 2.0
+ cobs_gros_max_T = 10.0
  cobs_T_file="TRANS-WOA13-T.nc"
  cobs_S_file="TRANS-WOA13-S.nc"
  cobs_TSOFF_file="TRANS-WOA13-TS-SDV-sm1-ann.nc"

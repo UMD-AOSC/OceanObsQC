@@ -71,13 +71,18 @@ CONTAINS
        CALL readmg(file, c1, idate, iret)
        IF (iret /= 0) EXIT
 
+       print *, "in obs_read PT1 ", c1
+
+
        DO
           CALL readsb(file, iret)
           IF (iret /= 0) EXIT
 
           ! read in the profiles, in a way depending on the profile type
           valid = .FALSE.
-          IF (c1 == "NC031001" .OR. c1 == "NC031002") THEN
+        ! IF (c1 == "NC031001" .OR. c1 == "NC031002") THEN
+          IF (c1 == "NC031001" .OR. c1 == "NC031002" .OR. &
+              c1 == "NC001002" .OR. c1 == "DBUOY") THEN
              CALL process_bathytesac(file, ob, valid)
           ELSE IF(c1 == "NC031005") THEN
              CALL process_float(file, ob, valid)
