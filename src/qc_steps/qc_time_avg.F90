@@ -86,6 +86,7 @@ CONTAINS
     REAL, PARAMETER :: re = 6371.3d3 !< radius of earth (meters)
     REAL, PARAMETER :: deg2rad = 4.0*ATAN(1.0)/180.0!< multiply by to convert degrees to radians
 
+    type(profile), TARGET :: prof
     TYPE(profile), POINTER :: prof1, prof2
     LOGICAL, ALLOCATABLE :: prof_valid (:)
     INTEGER, ALLOCATABLE :: prof_avg(:)
@@ -146,14 +147,13 @@ CONTAINS
              prof_valid(prof_avg(j)) = .FALSE.
           END DO
 
-          ! TODO, do the actual averaging
-          ! for now just using the first ob
-          CALL obs_out%push_back(prof1)
-       ELSE
-          CALL obs_out%push_back(prof1)
+          prof = average(obs_in, prof_avg(1:prof_avg_num))
+          prof1 => prof
        END IF
-    END DO outer
 
+       CALL obs_out%push_back(prof1)
+       
+    END DO outer
 
     DEALLOCATE(prof_valid, prof_avg)
     IF(rm_count > 0)&
@@ -163,9 +163,93 @@ CONTAINS
   !=============================================================================
 
 
+
+  !=============================================================================
+  FUNCTION average(obs, obs_idx) RESULT(prof)
+    use set_real_mod
+    use running_stats_mod
+
+    TYPE(vec_profile), INTENT(in)    :: obs
+    INTEGER, intent(in) :: obs_idx(:)
+    TYPE(profile) :: prof
+
+    TYPE(profile), POINTER :: prof_ptr
+    TYPE(set_real) :: depths_set
+    TYPE(set_real_itr) :: depths_itr
+
+    real :: r
+    real, allocatable :: depths(:)
+    type(running_stats), allocatable :: stats_t(:), stats_s(:)
+    integer :: i, j
+    print *, size(obs_idx)
+
+
+    ! determine the cumulative set of observation levels
+    !------------------------------------------------------------
+    
+    ! create a set containing all the unique depths
+    depths_set = set_real()
+    do i = 1, size(obs_idx)  ! for each profile to be averaged...       
+       prof_ptr => obs%of(obs_idx(i))
+
+       ! TODO: consider rounding the depths?
+
+       do j = 1, size(prof_ptr%depth) ! for each depth in the profile
+          call depths_set%insert(prof_ptr%depth(j))          
+       end do
+          
+       call prof_ptr%print()
+    end do
+
+    ! get the final list of depths from the set
+    allocate(depths(depths_set%size()))
+    depths_itr = depths_set%begin()
+    i = 1
+    do while(depths_itr%good())
+       depths(i) = depths_itr%value()
+       i = i + 1
+       call depths_itr%next()
+    end do
+
+    
+    ! for each level, calculate the number, mean, stddev
+    allocate(stats_t(size(depths)))
+    allocate(stats_s(size(depths)))
+    do i = 1, size(obs_idx)
+       prof_ptr => obs%of(obs_idx(i))
+
+       do j = 1, size(prof_ptr%depth)
+          ! TODO: determine the depth level using binary search
+
+          ! add value to the running stats
+          call stats_t(j)%add(prof_ptr%temp(j))
+       end do       
+    end do
+
+    ! TODO: rerun, not adding any profile levels that fall outside desired variance
+    ! TODO: remove levels that have insufficent number of obs compared with other levels
+    ! TODO: remove levels that have stddev too large
+    do i = 1, size(depths)
+       print *, depths(i), stats_t(i)%count, stats_t(i)%mean(), stats_t(i)%variance()
+    end do
+
+    ! TODO: generate final averaged profile
+    deallocate(stats_t)
+    deallocate(stats_s)
+    deallocate(depths)
+    stop 1
+       
+  END FUNCTION average
+  !=============================================================================
+
+
+  
+
+  !=============================================================================
   !> returns the number of days between two dates
   !> @param date1  first date, in YYYYMMDD form
   !> @param date2  second date, in YYYYMMDD form
+  !-----------------------------------------------------------------------------
   FUNCTION deltaDates(date1, date2) RESULT(days)
     INTEGER, INTENT(in) :: date1, date2
     INTEGER :: days
@@ -189,10 +273,14 @@ CONTAINS
     days = jd2-jd1
 
   END FUNCTION deltaDates
+  !=============================================================================
 
 
 
+
+  !=============================================================================
   !> get a julian day number from gregorian date
+  !-----------------------------------------------------------------------------
   PURE FUNCTION julianDate(Y,M,D) RESULT(jd)
     INTEGER, INTENT(in) :: y, m, d
     INTEGER :: jd
@@ -200,6 +288,7 @@ CONTAINS
     jd = (1461*(y+4800+(m-14)/12))/4 + (367*(m-2-12*((m-14)/12)))/12 &
          - (3*((y+4900+(m-14)/12)/100))/4 + D - 32075
   END FUNCTION julianDate
+  !=============================================================================
 
 
 END MODULE qc_time_avg_mod

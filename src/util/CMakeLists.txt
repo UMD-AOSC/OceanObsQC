@@ -1,5 +1,10 @@
-set(UTIL_SRCS
-  ${CMAKE_CURRENT_LIST_DIR}/prof_sort.F90
+set(srcs
+  prof_sort.F90
+  set_real.F90
+  running_stats.F90
 )
 
-target_sources(obsqc PRIVATE ${UTIL_SRCS})
+
+foreach(s ${srcs})
+  target_sources(obsqc PRIVATE ${CMAKE_CURRENT_LIST_DIR}/${s})
+endforeach()
