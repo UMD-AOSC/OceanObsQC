@@ -140,9 +140,6 @@ CONTAINS
           CYCLE
        END IF
 
-       ! !--> check
-       ! if (i == 1 .or. mod(i, 1000) == 0) print *, i, prof%plat, prof%depth
-
        ! loop for several tests that compare each level to the next
        each_lvl: DO j=2,SIZE(prof%depth)
 

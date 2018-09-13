@@ -122,8 +122,8 @@ CONTAINS
 
     !---
     if (.not. do_qc_profile) then
-       print *, "Skip qc_profile"
-       obs_out=obs_in  
+       PRINT *, "Skip qc_profile"
+       obs_out = obs_in  
        RETURN
     endif
 
@@ -192,7 +192,6 @@ CONTAINS
              !-- dtdz at surface
              dtdz = (prof%temp(1)-prof%temp(2))/(prof%depth(2)-prof%depth(1))
              if (ABS(dtdz) > prf_T1spmax) then
-                !-print *, "in prf :: surface T fix ",i, SIZE(prof%temp), &
                 !-dtdz, prof%temp(1),prof%temp(2),prof%temp(3) 
                 prof%temp(1) = prof%temp(2)
                 bad_prf_T1sp = bad_prf_T1sp + 1
@@ -203,7 +202,6 @@ CONTAINS
              kb = SIZE(prof%temp)
              dtdz = (prof%temp(kb-1)-prof%temp(kb))/(prof%depth(kb)-prof%depth(kb-1))
              if (ABS(dtdz) > prf_Tbspmax) then
-                !-print *, "in prf :: bottom T fix ",i, SIZE(prof%temp), &
                 !-dtdz, prof%temp(kb-2),prof%temp(kb-1),prof%temp(kb) 
                 bad_prf_Tbsp = bad_prf_Tbsp + 1
                 prof%tag = 65
@@ -233,7 +231,6 @@ CONTAINS
              !-- dsdz at surface
              dsdz = (prof%salt(1)-prof%salt(2))/(prof%depth(2)-prof%depth(1))
              if (ABS(dsdz) > prf_S1spmax) then
-                !-print *, "in prf :: surface S fix ",i, SIZE(prof%salt), &
                 !-dsdz, prof%salt(1),prof%salt(2),prof%salt(3) 
                 prof%salt(1) = prof%salt(2)
                 bad_prf_S1sp = bad_prf_S1sp + 1
@@ -244,7 +241,6 @@ CONTAINS
              kb = SIZE(prof%salt)
              dsdz = (prof%salt(kb-1)-prof%salt(kb))/(prof%depth(kb)-prof%depth(kb-1))
              if (ABS(dsdz) > prf_Sbspmax) then
-                !-print *, "in prf :: bottom T fix ",i, SIZE(prof%salt), &
                 !-dsdz, prof%salt(kb-2),prof%salt(kb-1),prof%salt(kb) 
                 bad_prf_Sbsp = bad_prf_Sbsp + 1
                 prof%tag = 67

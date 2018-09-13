@@ -23,31 +23,31 @@ MODULE qc_global_mod
   !=============================================================================
 
   ! parameters to be from namelist
-  LOGICAL, public :: do_qc_global = .TRUE.                  ! do this QC
-  character(len=80), public :: cobs_cord = "SPHERICAL"      ! climate obs coordinate
-  real, public :: cobs_dx = 1.0                             ! delta x in longitude
-  real, public :: cobs_dy = 1.0                             ! delta y in latitude
-  real, public :: cobs_x0 = 0.5                             ! longitude of 1st grid
-  real, public :: cobs_gros_min_T = 2.0                     ! minimum of the gross off set check for temp
-  real, public :: cobs_gros_max_T = 20.0                    ! maximum of the gross off set check for temp
-  real, public :: cobs_gros_min_S = 0.3                     ! minimum of the gross off set check for salt
-  real, public :: cobs_gros_max_S = 3.0                     ! maximum of the gross off set check for salt
-  integer, public :: cobs_fmax = 2                          ! max number of serching sea grid in function sphgrid_lalo2xy
-  real, public :: cobs_gros_sdv_T = 5.0                     ! max number of SDV range for the gross check for temp
-  real, public :: cobs_gros_sdv_S = 5.0                     ! max number of SDV range for the gross check for salt
-  integer, public :: cobs_nx                                ! x- dimension of cobs
-  integer, public :: cobs_ny                                ! y- dimension of cobs
-  integer, public :: cobs_nz                                ! z- dimension of cobs, layer
-  integer, public :: cobs_nt                                ! t- dimension of cobs, months
+  LOGICAL, PUBLIC :: do_qc_global = .TRUE.                  ! do this QC
+  CHARACTER(len=80), PUBLIC :: cobs_cord = "SPHERICAL"      ! climate obs coordinate
+  REAL, PUBLIC :: cobs_dx = 1.0                             ! delta x in longitude
+  REAL, PUBLIC :: cobs_dy = 1.0                             ! delta y in latitude
+  REAL, PUBLIC :: cobs_x0 = 0.5                             ! longitude of 1st grid
+  REAL, PUBLIC :: cobs_gros_MIN_T = 2.0                     ! minimum of the gross off set check for temp
+  REAL, PUBLIC :: cobs_gros_MAX_T = 20.0                    ! maximum of the gross off set check for temp
+  REAL, PUBLIC :: cobs_gros_MIN_S = 0.3                     ! minimum of the gross off set check for salt
+  REAL, PUBLIC :: cobs_gros_MAX_S = 3.0                     ! maximum of the gross off set check for salt
+  INTEGER, PUBLIC :: cobs_fMAX = 2                          ! max number of serching sea grid in function sphgrid_lalo2xy
+  REAL, PUBLIC :: cobs_gros_sdv_T = 5.0                     ! MAX number of SDV range for the gross check for temp
+  REAL, PUBLIC :: cobs_gros_sdv_S = 5.0                     ! MAX number of SDV range for the gross check for salt
+  INTEGER, PUBLIC :: cobs_nx                                ! x- dimension of cobs
+  INTEGER, PUBLIC :: cobs_ny                                ! y- dimension of cobs
+  INTEGER, PUBLIC :: cobs_nz                                ! z- dimension of cobs, layer
+  INTEGER, PUBLIC :: cobs_nt                                ! t- dimension of cobs, months
 
-  real, allocatable, public :: cobs_lon(:)           ! longitudes (degrees)
-  real, allocatable, public :: cobs_lat(:)           ! latitudes (degrees)
-  real, allocatable, public :: cobs_dep(:)           ! depths (meters)
-  real, allocatable, public :: cobs_temp(:,:,:,:)    ! temp
-  real, allocatable, public :: cobs_salt(:,:,:,:)    ! salt
-  real, allocatable, public :: cobs_toff(:,:,:,:)    ! toff
-  real, allocatable, public :: cobs_soff(:,:,:,:)    ! soff
-  real, allocatable, public :: cobs_mask(:,:)        ! ocean mask
+  REAL, ALLOCATABLE, PUBLIC :: cobs_lon(:)           ! longitudes (degrees)
+  REAL, ALLOCATABLE, PUBLIC :: cobs_lat(:)           ! latitudes (degrees)
+  REAL, ALLOCATABLE, PUBLIC :: cobs_dep(:)           ! depths (meters)
+  REAL, ALLOCATABLE, PUBLIC :: cobs_temp(:,:,:,:)    ! temp
+  REAL, ALLOCATABLE, PUBLIC :: cobs_salt(:,:,:,:)    ! salt
+  REAL, ALLOCATABLE, PUBLIC :: cobs_toff(:,:,:,:)    ! toff
+  REAL, ALLOCATABLE, PUBLIC :: cobs_soff(:,:,:,:)    ! soff
+  REAL, ALLOCATABLE, PUBLIC :: cobs_mask(:,:)        ! ocean mask
 
   type(cspline) :: cobs_tspl, cobs_tspl_off, cobs_sspl, cobs_sspl_off
 
@@ -78,48 +78,48 @@ CONTAINS
 
   !=============================================================================
   !> Perform initialization for this plugin.
-  !! This subroutine is only called once, even if the qc_step_check
-  !! subroutine is called multiple times.
+  !! This subroutine is only CALLed once, even if the qc_step_check
+  !! subroutine is CALLed multiple times.
   !! @param nmlfile  the unit number of the already open namelist file
   !-----------------------------------------------------------------------------
   SUBROUTINE qc_step_init(nmlfile)
     INTEGER, INTENT(in) :: nmlfile
-    integer :: unit, ncid, vid
-    integer :: i, j, k
-    real :: nbig = 1.0e5
-    character(len=:), allocatable :: cobs_TS_file
-    character(len=:), allocatable :: cobs_lon_dim
-    character(len=:), allocatable :: cobs_lat_dim
-    character(len=:), allocatable :: cobs_dep_dim
-    character(len=:), allocatable :: cobs_mon_dim
-    character(len=:), allocatable :: cobs_lon_var
-    character(len=:), allocatable :: cobs_lat_var
-    character(len=:), allocatable :: cobs_dep_var
-    character(len=:), allocatable :: cobs_temp_var
-    character(len=:), allocatable :: cobs_salt_var
-    character(len=:), allocatable :: cobs_toff_var
-    character(len=:), allocatable :: cobs_soff_var
+    INTEGER :: unit, ncid, vid
+    INTEGER :: i, j, k
+    REAL :: nbig = 1.0e5
+    CHARACTER(len=:), ALLOCATABLE :: cobs_TS_file
+    CHARACTER(len=:), ALLOCATABLE :: cobs_lon_dim
+    CHARACTER(len=:), ALLOCATABLE :: cobs_lat_dim
+    CHARACTER(len=:), ALLOCATABLE :: cobs_dep_dim
+    CHARACTER(len=:), ALLOCATABLE :: cobs_mon_dim
+    CHARACTER(len=:), ALLOCATABLE :: cobs_lon_var
+    CHARACTER(len=:), ALLOCATABLE :: cobs_lat_var
+    CHARACTER(len=:), ALLOCATABLE :: cobs_dep_var
+    CHARACTER(len=:), ALLOCATABLE :: cobs_temp_var
+    CHARACTER(len=:), ALLOCATABLE :: cobs_salt_var
+    CHARACTER(len=:), ALLOCATABLE :: cobs_toff_var
+    CHARACTER(len=:), ALLOCATABLE :: cobs_soff_var
 
     NAMELIST /qc_global/ do_qc_global, &
-      cobs_cord, cobs_dx, cobs_dy, cobs_x0, cobs_fmax, &
-      cobs_gros_sdv_T, cobs_gros_min_T, cobs_gros_max_T, &
-      cobs_gros_sdv_S, cobs_gros_min_S, cobs_gros_max_S, &
+      cobs_cord, cobs_dx, cobs_dy, cobs_x0, cobs_fMAX, &
+      cobs_gros_sdv_T, cobs_gros_MIN_T, cobs_gros_MAX_T, &
+      cobs_gros_sdv_S, cobs_gros_MIN_S, cobs_gros_MAX_S, &
       cobs_TS_file, cobs_lon_dim, cobs_lat_dim, cobs_dep_dim, &
       cobs_mon_dim, cobs_lon_var, cobs_lat_var, cobs_dep_var, &
       cobs_temp_var, cobs_salt_var, cobs_toff_var, cobs_soff_var
        
-    allocate(character(len=1024) :: cobs_TS_file)
-    allocate(character(len=1024) :: cobs_lon_dim)
-    allocate(character(len=1024) :: cobs_lat_dim)
-    allocate(character(len=1024) :: cobs_dep_dim)
-    allocate(character(len=1024) :: cobs_mon_dim)
-    allocate(character(len=1024) :: cobs_lon_var)
-    allocate(character(len=1024) :: cobs_lat_var)
-    allocate(character(len=1024) :: cobs_dep_var)
-    allocate(character(len=1024) :: cobs_temp_var)
-    allocate(character(len=1024) :: cobs_salt_var)
-    allocate(character(len=1024) :: cobs_toff_var)
-    allocate(character(len=1024) :: cobs_soff_var)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_TS_file)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_lon_dim)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_lat_dim)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_dep_dim)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_mon_dim)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_lon_var)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_lat_var)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_dep_var)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_temp_var)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_salt_var)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_toff_var)
+    ALLOCATE(CHARACTER(len=1024) :: cobs_soff_var)
 !---- read namelist from qc_global
     READ(nmlfile, qc_global)
 !----
@@ -141,57 +141,57 @@ CONTAINS
 !---- Now this global check is available for 
 !     only the sherical coordinate of WOA13
     if (trim(cobs_cord) .NE. "SPHERICAL") then
-       print *, "In qc_global, COBS should be SPHERICAL, Skip qc_global!"
-       return
+       PRINT *, "In qc_global, COBS should be SPHERICAL, Skip qc_global!"
+       RETURN
     endif   
 !---- load WOA13 clomatologies of T and S (analysis)
 !---- get dimensions
-    call check(nf90_open(cobs_TS_file, nf90_nowrite, ncid))
-    call check(nf90_inq_dimid(ncid, cobs_lon_dim, vid))
-    call check(nf90_inquire_dimension(ncid, vid, len=cobs_nx))
-    call check(nf90_inq_dimid(ncid, cobs_lat_dim, vid))
-    call check(nf90_inquire_dimension(ncid, vid, len=cobs_ny))
-    call check(nf90_inq_dimid(ncid, cobs_dep_dim, vid))
-    call check(nf90_inquire_dimension(ncid, vid, len=cobs_nz))
-    call check(nf90_inq_dimid(ncid, cobs_mon_dim, vid))
-    call check(nf90_inquire_dimension(ncid, vid, len=cobs_nt))
+    CALL check(nf90_open(cobs_TS_file, nf90_nowrite, ncid))
+    CALL check(nf90_inq_dimid(ncid, cobs_lon_dim, vid))
+    CALL check(nf90_inquire_dimension(ncid, vid, len=cobs_nx))
+    CALL check(nf90_inq_dimid(ncid, cobs_lat_dim, vid))
+    CALL check(nf90_inquire_dimension(ncid, vid, len=cobs_ny))
+    CALL check(nf90_inq_dimid(ncid, cobs_dep_dim, vid))
+    CALL check(nf90_inquire_dimension(ncid, vid, len=cobs_nz))
+    CALL check(nf90_inq_dimid(ncid, cobs_mon_dim, vid))
+    CALL check(nf90_inquire_dimension(ncid, vid, len=cobs_nt))
 !---- longitudes
-    allocate(cobs_lon(cobs_nx))
-    call check(nf90_inq_varid(ncid, cobs_lon_var, vid))
-    call check(nf90_get_var(ncid, vid, cobs_lon))
+    ALLOCATE(cobs_lon(cobs_nx))
+    CALL check(nf90_inq_varid(ncid, cobs_lon_var, vid))
+    CALL check(nf90_get_var(ncid, vid, cobs_lon))
 !---- latitudes
-    allocate(cobs_lat(cobs_ny))
-    call check(nf90_inq_varid(ncid, cobs_lat_var, vid))
-    call check(nf90_get_var(ncid, vid, cobs_lat))
+    ALLOCATE(cobs_lat(cobs_ny))
+    CALL check(nf90_inq_varid(ncid, cobs_lat_var, vid))
+    CALL check(nf90_get_var(ncid, vid, cobs_lat))
 !---- depths
-    allocate(cobs_dep(cobs_nz))
-    call check(nf90_inq_varid(ncid, cobs_dep_var, vid))
-    call check(nf90_get_var(ncid, vid, cobs_dep))
+    ALLOCATE(cobs_dep(cobs_nz))
+    CALL check(nf90_inq_varid(ncid, cobs_dep_var, vid))
+    CALL check(nf90_get_var(ncid, vid, cobs_dep))
 !---- temp
-    allocate(cobs_temp(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
-    call check(nf90_inq_varid(ncid, cobs_temp_var, vid))
-    call check(nf90_get_var(ncid, vid, cobs_temp))
+    ALLOCATE(cobs_temp(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
+    CALL check(nf90_inq_varid(ncid, cobs_temp_var, vid))
+    CALL check(nf90_get_var(ncid, vid, cobs_temp))
 !---- salt
-    allocate(cobs_salt(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
-    call check(nf90_inq_varid(ncid, cobs_salt_var, vid))
-    call check(nf90_get_var(ncid, vid, cobs_salt))
+    ALLOCATE(cobs_salt(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
+    CALL check(nf90_inq_varid(ncid, cobs_salt_var, vid))
+    CALL check(nf90_get_var(ncid, vid, cobs_salt))
 !---- toff
-    allocate(cobs_toff(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
-    call check(nf90_inq_varid(ncid, cobs_toff_var, vid))
-    call check(nf90_get_var(ncid, vid, cobs_toff))
+    ALLOCATE(cobs_toff(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
+    CALL check(nf90_inq_varid(ncid, cobs_toff_var, vid))
+    CALL check(nf90_get_var(ncid, vid, cobs_toff))
 !---- soff
-    allocate(cobs_soff(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
-    call check(nf90_inq_varid(ncid, cobs_soff_var, vid))
-    call check(nf90_get_var(ncid, vid, cobs_soff))
+    ALLOCATE(cobs_soff(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
+    CALL check(nf90_inq_varid(ncid, cobs_soff_var, vid))
+    CALL check(nf90_get_var(ncid, vid, cobs_soff))
 !----
-    call check(nf90_close(ncid))
+    CALL check(nf90_close(ncid))
 
 !---- set cobs_mask
-    allocate(cobs_mask(cobs_nx,cobs_ny))
+    ALLOCATE(cobs_mask(cobs_nx,cobs_ny))
     cobs_mask(:,:)=1.0
     do j=1,cobs_ny 
       do i=1,cobs_nx 
-        if (abs(cobs_temp(i,j,1,1) ) .GE. nbig) cobs_mask(i,j)=0.0
+        if (ABS(cobs_temp(i,j,1,1) ) .GE. nbig) cobs_mask(i,j)=0.0
       enddo
     enddo
   END SUBROUTINE qc_step_init
@@ -214,28 +214,28 @@ CONTAINS
     TYPE(vec_profile), INTENT(inout) :: obs_rej
 
     INTEGER :: i, j, k, btma, btmb, btmc, btmd, mon, mdt
-    logical :: ck_srch
+    LOGICAL :: ck_srch
     TYPE(profile),POINTER :: prof 
   ! TYPE(profile) :: prof 
 !-------------
     ! read in from namelist
-    integer :: obid_t  = 2210
-    integer :: obid_pt = 2211
-    integer :: obid_s  = 2220
-    real :: lat_bounds(2) = (/-90,90/)
-    real :: alon, alat
-    integer :: bad_gb_outbound, bad_gb_noprof, bad_gb_gross
-    integer :: bad_gb_gross_T, bad_gb_noprof_off_T
-    integer :: bad_gb_gross_S, bad_gb_noprof_off_S
-    integer :: x, y, z
-    integer :: good_check_T, good_check_S
-    real :: nbig = 1.0e5
-    real :: hbig = 1.0e5
-    real :: s, pt, v, odep, coff, cdif
-    real, allocatable :: cobs_tinp(:)
-    real, allocatable :: cobs_sinp(:)
-    real, allocatable :: cobs_tinp_off(:) 
-    real, allocatable :: cobs_sinp_off(:) 
+    INTEGER :: obid_t  = 2210
+    INTEGER :: obid_pt = 2211
+    INTEGER :: obid_s  = 2220
+    REAL :: lat_bounds(2) = (/-90,90/)
+    REAL :: alon, alat
+    INTEGER :: bad_gb_outbound, bad_gb_noprof, bad_gb_gross
+    INTEGER :: bad_gb_gross_T, bad_gb_noprof_off_T
+    INTEGER :: bad_gb_gross_S, bad_gb_noprof_off_S
+    INTEGER :: x, y, z
+    INTEGER :: good_check_T, good_check_S
+    REAL :: nbig = 1.0e5
+    REAL :: hbig = 1.0e5
+    REAL :: s, pt, v, odep, coff, cdif
+    REAL, ALLOCATABLE :: cobs_tinp(:)
+    REAL, ALLOCATABLE :: cobs_sinp(:)
+    REAL, ALLOCATABLE :: cobs_tinp_off(:) 
+    REAL, ALLOCATABLE :: cobs_sinp_off(:) 
 
 !----
     if (.not. do_qc_global) then
@@ -258,14 +258,14 @@ CONTAINS
        prof => obs_in%of(i)
      ! prof = obs_in%get(i)
 !--- 
-       if (allocated(cobs_tinp)) deallocate(cobs_tinp)
-       allocate(cobs_tinp(size(prof%depth)))
-       if (allocated(cobs_tinp_off)) deallocate(cobs_tinp_off)
-       allocate(cobs_tinp_off(size(prof%depth)))
-       if (allocated(cobs_sinp)) deallocate(cobs_sinp)
-       allocate(cobs_sinp(size(prof%depth)))
-       if (allocated(cobs_sinp_off)) deallocate(cobs_sinp_off)
-       allocate(cobs_sinp_off(size(prof%depth)))
+       if (ALLOCATED(cobs_tinp)) DEALLOCATE(cobs_tinp)
+       ALLOCATE(cobs_tinp(SIZE(prof%depth)))
+       if (ALLOCATED(cobs_tinp_off)) DEALLOCATE(cobs_tinp_off)
+       ALLOCATE(cobs_tinp_off(SIZE(prof%depth)))
+       if (ALLOCATED(cobs_sinp)) DEALLOCATE(cobs_sinp)
+       ALLOCATE(cobs_sinp(SIZE(prof%depth)))
+       if (ALLOCATED(cobs_sinp_off)) DEALLOCATE(cobs_sinp_off)
+       ALLOCATE(cobs_sinp_off(SIZE(prof%depth)))
        !--- find nearest ocean point in cobs grid
        alon = prof%lon
        alat = prof%lat
@@ -274,17 +274,17 @@ CONTAINS
        !---> Assume one of two case
        !---> obs(-180 - 180) cobs(0 - 360) : WOA09
        !---> obs(-180 - 180) cobs(-180 - 180) : WOA13
-       call sphgrid_lalo2xy(alon, alat, cobs_dx, cobs_dy, cobs_dx, x, y, ck_srch)
+       CALL sphgrid_lalo2xy(alon, alat, cobs_dx, cobs_dy, cobs_dx, x, y, ck_srch)
        if (ck_srch) then
           good_check_T = 1
           good_check_S = 1
           !--- temp
           !--- find the bottom depth of cobs point
           do btma = cobs_nz,1,-1
-             if (abs(cobs_temp(x,y,btma,mon)) <= nbig) EXIT
+             if (ABS(cobs_temp(x,y,btma,mon)) <= nbig) EXIT
           enddo 
           do btmc = cobs_nz,1,-1
-             if (abs(cobs_salt(x,y,btmc,mon)) <= nbig) EXIT
+             if (ABS(cobs_salt(x,y,btmc,mon)) <= nbig) EXIT
           enddo 
           !--- 
           if (btma <= 1 .and. btmc <= 1) then
@@ -296,13 +296,13 @@ CONTAINS
           !--- Interpolate to obs depth
           !--- obs T is in-situ T
           !-- TEMP check
-          if (btma > 1 .and.  size(prof%temp) .ne. 0) then
+          if (btma > 1 .and.  SIZE(prof%temp) .ne. 0) then
              cobs_tspl = cspline(cobs_dep(:btma), cobs_temp(x,y,:btma,mon))
              cobs_tinp = cobs_tspl%interp(prof%depth, check=.true.)
              !--- toff
              !--- check bottom of off-set data
              do btmb = cobs_nz,1,-1
-                if (abs(cobs_toff(x,y,btmb,mon)) <= nbig) EXIT
+                if (ABS(cobs_toff(x,y,btmb,mon)) <= nbig) EXIT
              enddo
              !--- 
              if (btmb <= 1) then
@@ -315,10 +315,10 @@ CONTAINS
              cobs_tspl_off = cspline(cobs_dep(:btmb), cobs_toff(x,y,:btmb,mon))
              cobs_tinp_off = cobs_tspl_off%interp(prof%depth, check=.true.)
              !==> gross check, 
-             vtemp : do k = 1, size(prof%depth)
-                cdif = abs(prof%temp(k)-cobs_tinp(k))
-                coff = max(cobs_gros_min_T, &
-                           min(cobs_gros_max_T,cobs_gros_sdv_T*cobs_tinp_off(k))) 
+             vtemp : do k = 1, SIZE(prof%depth)
+                cdif = ABS(prof%temp(k)-cobs_tinp(k))
+                coff = MAX(cobs_gros_MIN_T, &
+                           MIN(cobs_gros_MAX_T,cobs_gros_sdv_T*cobs_tinp_off(k))) 
                 if (cdif > coff) then
                    bad_gb_gross_T = bad_gb_gross_T + 1
                    prof%tag = 51
@@ -327,16 +327,16 @@ CONTAINS
                    prof%temp = PROF_UNDEF
                    EXIT vtemp
                 endif
-             enddo vtemp ! k = 1, size(prof%depth)
+             enddo vtemp ! k = 1, SIZE(prof%depth)
           end if !(btma > 1)
           !-- SALT check
-          if (btmc > 1 .and.  size(prof%salt) .ne. 0) then
+          if (btmc > 1 .and.  SIZE(prof%salt) .ne. 0) then
              cobs_sspl = cspline(cobs_dep(:btmc), cobs_salt(x,y,:btmc,mon))
              cobs_sinp = cobs_sspl%interp(prof%depth, check=.true.)
              !--- soff
              !--- check bottom of off-set data
              do btmd = cobs_nz,1,-1
-                if (abs(cobs_soff(x,y,btmd,mon)) <= nbig) EXIT
+                if (ABS(cobs_soff(x,y,btmd,mon)) <= nbig) EXIT
              enddo
              !--- 
              if (btmd <= 1) then
@@ -349,10 +349,10 @@ CONTAINS
              cobs_sspl_off = cspline(cobs_dep(:btmd), cobs_soff(x,y,:btmd,mon))
              cobs_sinp_off = cobs_sspl_off%interp(prof%depth, check=.true.)
              !==> gross check, 
-             vsalt : do k = 1, size(prof%depth)
-                cdif = abs(prof%salt(k)-cobs_sinp(k))
-                coff = max(cobs_gros_min_S, &
-                           min(cobs_gros_max_S,cobs_gros_sdv_S*cobs_sinp_off(k))) 
+             vsalt : do k = 1, SIZE(prof%depth)
+                cdif = ABS(prof%salt(k)-cobs_sinp(k))
+                coff = MAX(cobs_gros_MIN_S, &
+                           MIN(cobs_gros_MAX_S,cobs_gros_sdv_S*cobs_sinp_off(k))) 
                 if (cdif > coff) then
                    bad_gb_gross_S = bad_gb_gross_S + 1
                    prof%tag = 55
@@ -361,10 +361,10 @@ CONTAINS
                    prof%salt = PROF_UNDEF
                    EXIT vsalt
                 endif ! (cdif > coff)
-             enddo vsalt ! k = 1, size(prof%depth)
+             enddo vsalt ! k = 1, SIZE(prof%depth)
           end if !(btmc > 1)
           !--- keep T or S if good, and reject if both bad.
-          !--- rej file of rejected T or S can be bigger than real rejected profile of both bad. 
+          !--- rej file of rejected T or S can be bigger than REAL rejected profile of both bad. 
           if (good_check_T + good_check_S == 0) then
              bad_gb_gross = bad_gb_gross + 1
              prof%tag = 56
@@ -375,7 +375,7 @@ CONTAINS
          !PRINT *, 'IN qc_global , i= ',  &
          !      prof%date
          !if (mod(i,5000) == 0) PRINT *, 'IN qc_global , i= ', &
-         !    size(cobs_tinp), size(prof%temp),btma,btmb,btmc,btmd, &
+         !    SIZE(cobs_tinp), size(prof%temp),btma,btmb,btmc,btmd, &
          !    prof%id,prof%lon,prof%lat,prof%date,prof%tag, &
          ! !  cobs_tinp, prof%temp, cobs_temp(x,y,:btma,mon), &
          ! !  cobs_temp(x,y,:btma,mon), cobs_toff(x,y,:btmb,mon), &
@@ -392,10 +392,10 @@ CONTAINS
          
        CALL obs_out%push_back(prof)
 
-       deallocate(cobs_tinp)
-       deallocate(cobs_tinp_off)
-       deallocate(cobs_sinp)
-       deallocate(cobs_sinp_off)
+       DEALLOCATE(cobs_tinp)
+       DEALLOCATE(cobs_tinp_off)
+       DEALLOCATE(cobs_sinp)
+       DEALLOCATE(cobs_sinp_off)
 
     END DO global ! i = 1, obs_in%SIZE()
 
@@ -423,11 +423,11 @@ CONTAINS
 
  SUBROUTINE sphgrid_lalo2xy &
       (alon, alat, cobs_dx, cobs_dy, cobs_x0, ix,jy,srch)
-   real, intent(in) :: alon, alat, cobs_dx, cobs_dy, cobs_x0
-   integer, intent(inout) :: ix,jy
-   logical, intent(inout) :: srch
-   real :: plon, plat, pxmd, pymd
-   integer :: nx, ny, n, is, ie, js, je, i, j
+   REAL, INTENT(in) :: alon, alat, cobs_dx, cobs_dy, cobs_x0
+   INTEGER, INTENT(inout) :: ix,jy
+   LOGICAL, INTENT(inout) :: srch
+   REAL :: plon, plat, pxmd, pymd
+   INTEGER :: nx, ny, n, is, ie, js, je, i, j
    !-- Find nearest grid of cobs (i and j), assumed to the shperical coordinate
    !-- add 180.0 and 90.0, to make mapping from lat-lon to grid of shperical coord.
    !-- (both longitude and latitude of obs turn to positive (now -180, -90))
@@ -457,7 +457,7 @@ CONTAINS
       srch = .TRUE.
    else ! (cobs_mask(nx,ny) == 1)
       !-- serching inner loop
-      inner1 : do n = 1, cobs_fmax
+      inner1 : do n = 1, cobs_fMAX
          is = nx - n
          ie = nx + n
          js = ny - n
@@ -481,7 +481,7 @@ CONTAINS
           ix=9999
           jy=9999
           srch = .FALSE.
-      end do inner1 ! n = 1, cobs_fmax     
+      end do inner1 ! n = 1, cobs_fMAX     
    endif ! (cobs_mask(nx,ny) == 1)
 
  END SUBROUTINE sphgrid_lalo2xy
@@ -489,7 +489,7 @@ CONTAINS
 !---------------------------
 
   subroutine check(status)
-    integer, intent(in) :: status
+    INTEGER, INTENT(in) :: status
     if(status /= nf90_noerr) then
        print *, trim(nf90_strerror(status))
        stop 1
