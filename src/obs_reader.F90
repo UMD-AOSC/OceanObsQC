@@ -62,7 +62,7 @@ CONTAINS
 
 
     TYPE(vec_profile) :: obs_in
-    TYPE(profile) :: ob
+    TYPE(profile), POINTER :: ob
     INTEGER :: i, j, k
     LOGICAL :: vSalt, vTemp
     REAL, ALLOCATABLE :: tmp_r(:)
@@ -76,7 +76,7 @@ CONTAINS
     !--------------------------------------------------------------------------
     ! for each profile
     DO i=1,obs_in%SIZE()
-       ob = obs_in%get(i)
+       ob => obs_in%of(i)
 
        ! dont use if not within desired date range
        IF(ob%date < start_date .OR. ob%date > end_date) CYCLE
@@ -99,12 +99,12 @@ CONTAINS
        j=0
        DO k=1,SIZE(ob%depth)
           ! is the salinity valid at this leve?
-          vSalt = SIZE(ob%salt) >= k 
-          if (vSalt) vSalt =  ob%salt(k) < PROF_UNDEF
+          vSalt = SIZE(ob%salt) >= k
+          IF (vSalt) vSalt =  ob%salt(k) < PROF_UNDEF
 
           ! is the temperature valid at this level?
           vTemp = SIZE(ob%temp) >= k
-          if (vTemp) vTemp =  ob%temp(k) < PROF_UNDEF
+          IF (vTemp) vTemp =  ob%temp(k) < PROF_UNDEF
 
           ! if valid temp or salinity..AND valid depth
           IF ( (vSalt .OR. vTemp) .AND. ob%depth(k) < PROF_UNDEF) THEN

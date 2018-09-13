@@ -34,8 +34,12 @@ PROGRAM obsqc
   CHARACTER(len=1024) :: rej_filename
 
   INTEGER :: i, nmlfile
+!<<<<<< HEAD
   TYPE(vec_profile) :: obs, obs2, obs3
   TYPE(profile) :: ob
+!======
+! TYPE(vec_profile) :: obs, obs2
+!>>>>>> 8900c20d386a5e59337491fa88ae1decb2fd371f
 
   TYPE(obs_reader_ptr) :: obs_reader_wrapper
   TYPE(obs_writer_ptr) :: obs_writer_wrapper
@@ -191,7 +195,7 @@ CONTAINS
 
     INTEGER :: i
     INTEGER :: prf_t_cnt, prf_s_cnt, obs_t_cnt, obs_s_cnt
-    TYPE(profile) :: prf
+    TYPE(profile), POINTER :: prf
 
 
     prf_t_cnt = 0
@@ -200,7 +204,7 @@ CONTAINS
     obs_s_cnt = 0
 
     DO i=1,obs%SIZE()
-       prf = obs%get(i)
+       prf => obs%of(i)
        IF ( SIZE(prf%temp) > 0) THEN
           prf_t_cnt = prf_t_cnt + 1
           obs_t_cnt = obs_t_cnt + SIZE(prf%temp)

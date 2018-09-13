@@ -10,7 +10,12 @@ set(PLUGINS
   qc_vrt_avg
   qc_time_avg
   qc_depths
+#<<<<<<< HEAD
+  qc_profile
   qc_global
+#=======
+#  qc_density
+#>>>>>>> 8900c20d386a5e59337491fa88ae1decb2fd371f
   )
 
 

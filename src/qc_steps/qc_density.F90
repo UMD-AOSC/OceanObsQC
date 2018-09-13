@@ -1,27 +1,32 @@
 !===============================================================================
-!> Vertical averaging if too many vertical levels
+!>
 !-------------------------------------------------------------------------------
-MODULE qc_vrt_avg_mod
+MODULE qc_density_mod
   USE qc_step_mod
   USE profile_mod
   USE vec_profile_mod
+  USE gsw_mod_toolbox
 
   IMPLICIT NONE
   PRIVATE
 
   !=============================================================================
   !-----------------------------------------------------------------------------
-  TYPE, EXTENDS(qc_step), PUBLIC :: qc_vrt_avg
+  TYPE, EXTENDS(qc_step), PUBLIC :: qc_density
    CONTAINS
      PROCEDURE, NOPASS :: name  => qc_step_name
      PROCEDURE, NOPASS :: desc  => qc_step_desc
      PROCEDURE, NOPASS :: init  => qc_step_init
      PROCEDURE, NOPASS :: check => qc_step_check
-  END TYPE qc_vrt_avg
+  END TYPE qc_density
   !=============================================================================
+
+  ! parameters read in from namelist
+  REAL :: dens_inv_tol = 0.0
 
 
 CONTAINS
+
 
 
   !=============================================================================
@@ -29,7 +34,7 @@ CONTAINS
   !-----------------------------------------------------------------------------
   FUNCTION qc_step_name() RESULT(name)
     CHARACTER(:), ALLOCATABLE :: name
-    name = "qc_vrt_avg"
+    name = "qc_density"
   END FUNCTION qc_step_name
   !=============================================================================
 
@@ -41,7 +46,7 @@ CONTAINS
   !-----------------------------------------------------------------------------
   FUNCTION qc_step_desc() RESULT(desc)
     CHARACTER(:), ALLOCATABLE :: desc
-    desc = "vertical averaging of dense levels"
+    desc = "check for density inversions"
   END FUNCTION qc_step_desc
   !=============================================================================
 
@@ -56,9 +61,9 @@ CONTAINS
   SUBROUTINE qc_step_init(nmlfile)
     INTEGER, INTENT(in) :: nmlfile
 
-    !NAMELIST /qc_vrt_avg/ var1, var2
-    !READ(nmlfile, qc_vrt_avg)
-    !PRINT qc_vrt_avg
+    NAMELIST /qc_density/ dens_inv_tol
+    READ(nmlfile, qc_density)
+    PRINT qc_density
 
   END SUBROUTINE qc_step_init
   !=============================================================================
@@ -74,26 +79,82 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out, obs_rej)
+  SUBROUTINE qc_step_check(obs_in, obs_out)
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
-    TYPE(vec_profile), INTENT(inout) :: obs_rej
 
-    INTEGER :: i
+    INTEGER :: i, j, nlev, k, l
     TYPE(profile), POINTER :: prof
+    LOGICAL :: keep
+    REAL(8), ALLOCATABLE :: pot_rho(:), sa(:), pres(:)
 
-    PRINT *, "NOTE: not yet implemented"
+    INTEGER :: bad_densinv
 
-    DO i = 1, obs_in%SIZE()
+    bad_densinv = 0
+    do_prof: DO i = 1, obs_in%SIZE()
        prof => obs_in%of(i)
+       keep = .TRUE.
 
-       ! This is where the special checks would be done
-       ! For now, take the profile the way it is.
+       nlev = SIZE(prof%depth)
 
-       CALL obs_out%push_back(prof)
-    END DO
+       ! if salinity and temperature profiles exist
+       IF (SIZE(prof%temp) == SIZE(prof%salt)) THEN
+          ALLOCATE(pres(nlev))
+          ALLOCATE(pot_rho(nlev))
+          ALLOCATE(sa(nlev))
+
+          ! convert depth to pressure
+          pres = gsw_p_from_z(-REAL(prof%depth, 8), prof%lat)
+
+          ! convert practical salinity to absolute salinity
+          sa=0
+          WHERE(prof%salt < PROF_UNDEF) sa = prof%salt
+          sa = gsw_sa_from_sp(sa, pres, prof%lon, prof%lat)
+
+          ! calculate potential density
+          pot_rho = gsw_pot_rho_t_exact(sa, REAL(prof%temp,8), pres, 0d0)
+
+
+          ! find inversions
+          !---------------------------------------------------------------------
+
+          ! find first level with valid density
+          j=1
+          DO WHILE(j <= nlev)
+             IF(prof%temp(j) < PROF_UNDEF .AND. prof%salt(j) < PROF_UNDEF) EXIT
+             j = j + 1
+          END DO
+
+          ! for each valid level after this
+          do_lvl: DO k=j+1, nlev
+             IF(prof%temp(k) >= PROF_UNDEF .OR. prof%salt(k) >= PROF_UNDEF) CYCLE
+
+             IF (pot_rho(j) - pot_rho(k) > dens_inv_tol) THEN
+
+                ! if we found a density inversion, done use this profile
+                bad_densinv = bad_densinv + 1
+                keep = .FALSE.
+                EXIT do_lvl
+
+                ! TODO check to see if individual levels could be removed to
+                ! fix the density inversion
+             END IF
+             j=k
+          END DO do_lvl
+
+          DEALLOCATE(pres, pot_rho, sa)
+       END IF
+
+       ! only keep if density inversion not found
+       IF(keep) CALL obs_out%push_back(prof)
+
+    END DO do_prof
+
+    ! print out stats if any profiles were removed
+    IF(bad_densinv > 0)&
+         PRINT '(I8,A)', bad_densinv, ' profiles removed for density inversion'
 
   END SUBROUTINE qc_step_check
   !=============================================================================
 
-END MODULE qc_vrt_avg_mod
+END MODULE qc_density_mod

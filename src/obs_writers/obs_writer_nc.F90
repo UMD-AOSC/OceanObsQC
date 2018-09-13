@@ -45,33 +45,44 @@ CONTAINS
 
     INTEGER :: ncid, d_prfs, d_obs, vid
 
-    TYPE(profile) :: prf
+    TYPE(profile), POINTER :: prf
     INTEGER :: obs_count, obs_offset, obs_len, i, j, p, o
-    integer :: prf_count
+    INTEGER :: prf_count
 
-    REAL,    allocatable :: prf_lat(:)
-    REAL,    allocatable :: prf_lon(:)
-    INTEGER, allocatable :: prf_type(:)
-    REAL,    allocatable :: prf_hr(:)
-    INTEGER, allocatable :: prf_obsidx(:)
-    INTEGER, allocatable :: prf_obslen(:)
+    REAL,    ALLOCATABLE :: prf_lat(:)
+    REAL,    ALLOCATABLE :: prf_lon(:)
+    INTEGER, ALLOCATABLE :: prf_type(:)
+    INTEGER, ALLOCATABLE :: prf_date(:)
+    REAL,    ALLOCATABLE :: prf_hr(:)
+    INTEGER, ALLOCATABLE :: prf_tag(:)
+    INTEGER, ALLOCATABLE :: prf_obsidx(:)
+    INTEGER, ALLOCATABLE :: prf_obslen(:)
     REAL,    ALLOCATABLE :: obs_depth(:)
     REAL,    ALLOCATABLE :: obs_val(:)
 
-    
+
+    ! The netCDF file can't handle 0 observations
+    IF(obs%SIZE() == 0) THEN
+       PRINT *, ""
+       PRINT *, "WARNING: cannot write an output file in NetCDF format..."
+       PRINT *, "There are NO profiles to save."
+       RETURN
+    END IF
+
+
     ! go through once and count the number of observations/profiles that will be produced
     prf_count = 0
     obs_count = 0
     DO i=1,obs%SIZE()
-       prf = obs%get(i)
-       if( size(prf%temp) > 0) then
+       prf => obs%of(i)
+       IF( SIZE(prf%temp) > 0) THEN
           prf_count = prf_count + 1
-          obs_count = obs_count + size(prf%temp)
-       end if
-       if( size(prf%salt) > 0) then
+          obs_count = obs_count + SIZE(prf%temp)
+       END IF
+       IF( SIZE(prf%salt) > 0) THEN
           prf_count = prf_count + 1
-          obs_count = obs_count + size(prf%salt)
-       end if 
+          obs_count = obs_count + SIZE(prf%salt)
+       END IF
     END DO
 
 
@@ -79,6 +90,8 @@ CONTAINS
     ALLOCATE(prf_lat(prf_count))
     ALLOCATE(prf_lon(prf_count))
     ALLOCATE(prf_type(prf_count))
+    ALLOCATE(prf_date(prf_count))
+    ALLOCATE(prf_tag(prf_count))
     ALLOCATE(prf_hr(prf_count))
     ALLOCATE(prf_obsidx(prf_count))
     ALLOCATE(prf_obslen(prf_count))
@@ -87,26 +100,28 @@ CONTAINS
     obs_offset = 1
     p = 0
     DO i=1,obs%SIZE()
-       prf = obs%get(i)
-       do j=1,2
-          if (j==1 .and. size(prf%temp) == 0) cycle
-          if (j==2 .and. size(prf%salt) == 0) cycle          
+       prf => obs%of(i)
+       DO j=1,2
+          IF (j==1 .AND. SIZE(prf%temp) == 0) CYCLE
+          IF (j==2 .AND. SIZE(prf%salt) == 0) CYCLE
           p = p + 1
           prf_lat(p) = prf%lat
           prf_lon(p) = prf%lon
+          prf_date(p) = prf%date
+          prf_tag(p) = prf%tag
           prf_hr(p)  = prf%hour
           prf_type(p) = j
           prf_obsidx(p) = obs_offset
-          
-          obs_len = merge(SIZE(prf%temp), size(prf%salt), j==1)
+
+          obs_len = MERGE(SIZE(prf%temp), SIZE(prf%salt), j==1)
           prf_obslen(p) = obs_len
           obs_depth(obs_offset:obs_offset+obs_len-1) = prf%depth
-          obs_val(obs_offset:obs_offset+obs_len-1) = merge(prf%temp, prf%salt, j==1)
+          obs_val(obs_offset:obs_offset+obs_len-1) = MERGE(prf%temp, prf%salt, j==1)
           obs_offset = obs_offset + obs_len
-       end do
+       END DO
     END DO
 
-    
+
     ! output file definition
     CALL check(nf90_create(filename, NF90_CLOBBER, ncid))
 
@@ -114,44 +129,53 @@ CONTAINS
     CALL check(nf90_def_dim(ncid, "obs", obs_count, d_obs))
 
     CALL check(nf90_def_var(ncid, "prf_type",   nf90_short, d_prfs, vid))
-    call check(nf90_put_att(ncid, vid, "description", &
+    CALL check(nf90_put_att(ncid, vid, "description", &
          "Profile type: TEMP=1, SALT=2"))
-    
+
     CALL check(nf90_def_var(ncid, "prf_lat",    nf90_real,  d_prfs, vid))
-    call check(nf90_put_att(ncid, vid, "description", "latitude"))
-    call check(nf90_put_att(ncid, vid, "units", "degrees_east"))
-    
+    CALL check(nf90_put_att(ncid, vid, "description", "latitude"))
+    CALL check(nf90_put_att(ncid, vid, "units", "degrees_north"))
+
     CALL check(nf90_def_var(ncid, "prf_lon",    nf90_real,  d_prfs, vid))
-    call check(nf90_put_att(ncid, vid, "description", "longitude"))    
-    call check(nf90_put_att(ncid, vid, "units", "degrees_north"))
+    CALL check(nf90_put_att(ncid, vid, "description", "longitude"))
+    CALL check(nf90_put_att(ncid, vid, "units", "degrees_east"))
+
+    CALL check(nf90_def_var(ncid, "prf_date",     nf90_int,  d_prfs, vid))
+    CALL check(nf90_put_att(ncid, vid, "description", "time"))
+    CALL check(nf90_put_att(ncid, vid, "units", "date"))
 
     CALL check(nf90_def_var(ncid, "prf_hr",     nf90_real,  d_prfs, vid))
-    call check(nf90_put_att(ncid, vid, "description", "time"))
-    call check(nf90_put_att(ncid, vid, "units", "hours"))
+    CALL check(nf90_put_att(ncid, vid, "description", "hours"))
+    CALL check(nf90_put_att(ncid, vid, "units", "hours"))
+
+    CALL check(nf90_def_var(ncid, "prf_tag",     nf90_int,  d_prfs, vid))
+    CALL check(nf90_put_att(ncid, vid, "description", &
+         "tag for output data, in rejected data, tag means reject-check-type"))
 
     CALL check(nf90_def_var(ncid, "prf_obsidx", nf90_int,   d_prfs, vid))
-    call check(nf90_put_att(ncid, vid, "description", &
+    CALL check(nf90_put_att(ncid, vid, "description", &
          "starting index (1 based array) in obs_* arrays of observations for this profile"))
+
     CALL check(nf90_def_var(ncid, "prf_obslen", nf90_int,   d_prfs, vid))
-    call check(nf90_put_att(ncid, vid, "description", &
+    CALL check(nf90_put_att(ncid, vid, "description", &
          "number of entries in obs_* arrays for this profile"))
 
     CALL check(nf90_def_var(ncid, "obs_depth",  nf90_real,  d_obs,  vid))
-    call check(nf90_put_att(ncid, vid, "description", "depth of single obs_val observation"))
-    call check(nf90_put_att(ncid, vid, "units", "meters"))
-    
-    CALL check(nf90_def_var(ncid, "obs_val",    nf90_real,  d_obs,  vid))
-    call check(nf90_put_att(ncid, vid, "description", "observation value at obs_depth level"))
-    call check(nf90_put_att(ncid, vid, "units", "celsius (if type=1), PSU (if type=2)"))
+    CALL check(nf90_put_att(ncid, vid, "description", "depth of single obs_val observation"))
+    CALL check(nf90_put_att(ncid, vid, "units", "meters"))
 
-    call check(nf90_put_att(ncid, NF90_GLOBAL, "source", "NCEP observation profile quality control program"))
-    call check(nf90_put_att(ncid, NF90_GLOBAL, "source_version", CVERSION))
-    call check(nf90_put_att(ncid, NF90_GLOBAL, "descriptions", "Ocean profiles that have undergone quality control"//&
+    CALL check(nf90_def_var(ncid, "obs_val",    nf90_real,  d_obs,  vid))
+    CALL check(nf90_put_att(ncid, vid, "description", "observation value at obs_depth level"))
+    CALL check(nf90_put_att(ncid, vid, "units", "celsius (if type=1), PSU (if type=2)"))
+
+    CALL check(nf90_put_att(ncid, NF90_GLOBAL, "source", "NCEP observation profile quality control program"))
+    CALL check(nf90_put_att(ncid, NF90_GLOBAL, "source_version", CVERSION))
+    CALL check(nf90_put_att(ncid, NF90_GLOBAL, "descriptions", "Ocean profiles that have undergone quality control"//&
          " checks. Temperature and Salinity are considered separate profiles. Each profile has an entry in the prf_ variables. "//&
          " The observations within each profile are placed in the obs_ variables, with array starting index and length "//&
          " specified by prf_obsidx and prf_obslen. For example, observations for the first profile are given by "//&
          " obs_val(prf_obsidx(1) : prf_obsidx(1)+prf_obslen(1)), assuming Fortran."))
-    
+
     CALL check(nf90_enddef(ncid))
 
 
@@ -165,8 +189,14 @@ CONTAINS
     CALL check(nf90_inq_varid(ncid, "prf_lon", vid))
     CALL check(nf90_put_var(ncid, vid, prf_lon))
 
+    CALL check(nf90_inq_varid(ncid, "prf_date", vid))
+    CALL check(nf90_put_var(ncid, vid, prf_date))
+
     CALL check(nf90_inq_varid(ncid, "prf_hr", vid))
     CALL check(nf90_put_var(ncid, vid, prf_hr))
+
+    CALL check(nf90_inq_varid(ncid, "prf_tag", vid))
+    CALL check(nf90_put_var(ncid, vid, prf_tag))
 
     CALL check(nf90_inq_varid(ncid, "prf_lon", vid))
     CALL check(nf90_put_var(ncid, vid, prf_lon))

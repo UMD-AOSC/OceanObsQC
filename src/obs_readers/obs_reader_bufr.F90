@@ -44,12 +44,9 @@ CONTAINS
     TYPE(vec_profile), INTENT(inout) :: obs
 
     LOGICAL :: valid
-    TYPE(profile) :: ob, ob2
+    TYPE(profile) :: ob
     INTEGER :: file, idate, iret
     CHARACTER*8 c1
-
-    TYPE(profile), ALLOCATABLE :: prf(:)
-    INTEGER ::cnt
 
     ! make sure input file exists
     INQUIRE(file=filename, exist=valid)
@@ -65,27 +62,33 @@ CONTAINS
     CALL datelen(10)
 
     ! process each profile
-    cnt = 0
     iret = 0
     DO
        CALL readmg(file, c1, idate, iret)
        IF (iret /= 0) EXIT
-
-       print *, "in obs_read PT1 ", c1
-
-
        DO
           CALL readsb(file, iret)
           IF (iret /= 0) EXIT
 
           ! read in the profiles, in a way depending on the profile type
           valid = .FALSE.
-        ! IF (c1 == "NC031001" .OR. c1 == "NC031002") THEN
-          IF (c1 == "NC031001" .OR. c1 == "NC031002" .OR. &
-              c1 == "NC001002" .OR. c1 == "DBUOY") THEN
+          IF (c1 == "NC031001" .OR. &
+              c1 == "NC031004" ) THEN
              CALL process_bathytesac(file, ob, valid)
+             ob%plat = PLAT_BATHY
+          ELSE IF (&
+               c1 == "NC031002" .OR. &
+               c1 == "NC031006" ) THEN
+             CALL process_bathytesac(file, ob, valid)
+             ob%plat = PLAT_TESAC
+          ELSE IF (&
+               c1 == "NC001002" .OR. &
+               c1 == "DBUOY" ) THEN
+             CALL process_bathytesac(file, ob, valid)
+             ob%plat = PLAT_BUOY
           ELSE IF(c1 == "NC031005") THEN
              CALL process_float(file, ob, valid)
+             ob%plat = PLAT_FLOAT
           ELSE
              PRINT *, "WARN: unknown ob type: ", c1
              STOP 1
@@ -99,7 +102,6 @@ CONTAINS
 
           ! valid ob found, save to list
           CALL obs%push_back(ob)
-          IF(valid) cnt = cnt + 1
 
        END DO
     END DO
@@ -130,11 +132,11 @@ CONTAINS
     valid = .FALSE.
 
     ! year, month, day
-    CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'YYMMDD')
+    CALL UFBINT(file, r8, MXMN, MXLV, nlv, 'YEAR MNTH DAYS')
     ob%date = r8(1,1)*10000 + r8(2,1)*100 + r8(3,1)
 
     ! hour of day (fractional)
-    CALL UFBSEQ(file, r8, MXMN, MXLV, nlv, 'HHMM')
+    CALL UFBINT(file, r8, MXMN, MXLV, nlv, 'HOUR MINU')
     ob%hour = r8(1,1) + r8(2,1) / 60.0
 
     ! platform callsign
@@ -142,14 +144,21 @@ CONTAINS
     ob%id = str
 
     ! lat/lon
-    CALL ufbseq(file, r8, MXMN, MXLV, nlv, 'LTLONH')
+    CALL ufbint(file, r8, MXMN, MXLV, nlv, 'CLATH CLONH')
+    IF(nlv == 0) THEN
+       ! try to find the low res lat/lon instead
+       CALL ufbint(file, r8, MXMN, MXLV, nlv, 'CLAT CLON')
+    END IF
     ob%lat = r8(1,1)
     ob%lon = r8(2,1)
+
 
     ! depth, temperature, salinity
     CALL ufbrep(file, r8, MXMN, MXLV, nlv, 'DBSS STMP SALN')
     IF(nlv==0) THEN
-       !PRINT *, "ERROR: no levels found"
+       ! no levels found... keep this profile in case we want the buoy position
+       ! info at some point
+       ALLOCATE(ob%depth(0), ob%temp(0), ob%salt(0))
        RETURN
     END  IF
 

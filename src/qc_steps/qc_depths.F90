@@ -30,8 +30,8 @@ MODULE qc_depths_mod
   ! parameters to be read in from the namelist
   LOGICAL :: check_nonmono = .TRUE.
   INTEGER :: min_levels = 3
-  REAL    :: max_depth = 10000
-  REAL    :: max_start = 10.0
+  REAL    :: max_depth = 6000
+  REAL    :: max_start = 36.0
   REAL    :: max_gap   = 500.0
 
 
@@ -96,7 +96,8 @@ CONTAINS
     TYPE(vec_profile), INTENT(inout) :: obs_rej
 
     INTEGER :: i, j
-    TYPE(profile) :: prof
+    TYPE(profile), POINTER :: prof
+  ! TYPE(profile) :: prof
 
     INTEGER :: bad_minpoints, bad_maxdepth, bad_nonmono, bad_deepstart, &
          bad_largegap
@@ -109,13 +110,14 @@ CONTAINS
 
     ! check each profile
     each_profile: DO i = 1, obs_in%SIZE()
-       prof = obs_in%get(i)
+       prof => obs_in%of(i)
+    !  prof = obs_in%of(i)
 
 
        ! remove if profile does not have enough levels
        IF(min_levels > 0 .AND. SIZE(prof%depth) < min_levels) THEN
           bad_minpoints = bad_minpoints + 1
-          prof%hour=31.0
+          prof%tag = 31
           CALL obs_rej%push_back(prof)          
           CYCLE
        END IF
@@ -124,7 +126,7 @@ CONTAINS
        ! check first level too deep
        IF(max_start > 0 .AND. prof%depth(1) > max_start) THEN
           bad_deepstart = bad_deepstart + 1
-          prof%hour=32.0
+          prof%tag = 32
           CALL obs_rej%push_back(prof)          
           CYCLE
        END IF
@@ -133,11 +135,13 @@ CONTAINS
        ! check unrealistic max depth
        IF(max_depth > 0 .AND. MAXVAL(prof%depth) > max_depth) THEN
           bad_maxdepth = bad_maxdepth + 1
-          prof%hour=33.0
+          prof%tag = 33
           CALL obs_rej%push_back(prof)          
           CYCLE
        END IF
 
+       ! !--> check
+       ! if (i == 1 .or. mod(i, 1000) == 0) print *, i, prof%plat, prof%depth
 
        ! loop for several tests that compare each level to the next
        each_lvl: DO j=2,SIZE(prof%depth)
@@ -145,7 +149,7 @@ CONTAINS
           ! check for non-monotonic depths
           IF (check_nonmono .AND. prof%depth(j) <= prof%depth(j-1)) THEN
              bad_nonmono = bad_nonmono + 1
-             prof%hour=34.0
+             prof%tag = 34
              CALL obs_rej%push_back(prof)          
              CYCLE each_profile
           END IF
@@ -153,7 +157,7 @@ CONTAINS
           ! check for large vertical gap
           IF (max_gap > 0 .AND. prof%depth(j) - prof%depth(j-1) > max_gap) THEN
              bad_largegap = bad_largegap + 1
-             prof%hour=35.0
+             prof%tag = 35
              CALL obs_rej%push_back(prof)          
              CYCLE each_profile
           END IF
