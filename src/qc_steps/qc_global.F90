@@ -107,7 +107,7 @@ CONTAINS
       cobs_TS_file, cobs_lon_dim, cobs_lat_dim, cobs_dep_dim, &
       cobs_mon_dim, cobs_lon_var, cobs_lat_var, cobs_dep_var, &
       cobs_temp_var, cobs_salt_var, cobs_toff_var, cobs_soff_var
-       
+
     ALLOCATE(CHARACTER(len=1024) :: cobs_TS_file)
     ALLOCATE(CHARACTER(len=1024) :: cobs_lon_dim)
     ALLOCATE(CHARACTER(len=1024) :: cobs_lat_dim)
@@ -215,9 +215,8 @@ CONTAINS
 
     INTEGER :: i, j, k, btma, btmb, btmc, btmd, mon, mdt
     LOGICAL :: ck_srch
-    TYPE(profile),POINTER :: prof 
-  ! TYPE(profile) :: prof 
-!-------------
+    TYPE(profile),POINTER :: prof
+
     ! read in from namelist
     INTEGER :: obid_t  = 2210
     INTEGER :: obid_pt = 2211
@@ -256,8 +255,7 @@ CONTAINS
 !--- main loop
     global : DO i = 1, obs_in%SIZE()
        prof => obs_in%of(i)
-     ! prof = obs_in%get(i)
-!--- 
+!---
        if (ALLOCATED(cobs_tinp)) DEALLOCATE(cobs_tinp)
        ALLOCATE(cobs_tinp(SIZE(prof%depth)))
        if (ALLOCATED(cobs_tinp_off)) DEALLOCATE(cobs_tinp_off)
@@ -275,18 +273,22 @@ CONTAINS
        !---> obs(-180 - 180) cobs(0 - 360) : WOA09
        !---> obs(-180 - 180) cobs(-180 - 180) : WOA13
        CALL sphgrid_lalo2xy(alon, alat, cobs_dx, cobs_dy, cobs_dx, x, y, ck_srch)
+
        if (ck_srch) then
+          ! if a good location was found...
+
           good_check_T = 1
           good_check_S = 1
+
           !--- temp
           !--- find the bottom depth of cobs point
           do btma = cobs_nz,1,-1
              if (ABS(cobs_temp(x,y,btma,mon)) <= nbig) EXIT
-          enddo 
+          enddo
           do btmc = cobs_nz,1,-1
              if (ABS(cobs_salt(x,y,btmc,mon)) <= nbig) EXIT
-          enddo 
-          !--- 
+          enddo
+          !---
           if (btma <= 1 .and. btmc <= 1) then
              bad_gb_noprof = bad_gb_noprof + 1
              prof%tag = 52
@@ -314,8 +316,11 @@ CONTAINS
              !--- Interpolate to obs depth
              cobs_tspl_off = cspline(cobs_dep(:btmb), cobs_toff(x,y,:btmb,mon))
              cobs_tinp_off = cobs_tspl_off%interp(prof%depth, check=.true.)
-             !==> gross check, 
-             vtemp : do k = 1, SIZE(prof%depth)
+             !==> gross check,
+             vtemp : do k = 1, SIZE(prof%temp)
+                ! ignore this level if there is no defined temperature
+                IF (prof%salt(k) == PROF_UNDEF) CYCLE
+
                 cdif = ABS(prof%temp(k)-cobs_tinp(k))
                 coff = MAX(cobs_gros_MIN_T, &
                            MIN(cobs_gros_MAX_T,cobs_gros_sdv_T*cobs_tinp_off(k))) 
@@ -329,6 +334,8 @@ CONTAINS
                 endif
              enddo vtemp ! k = 1, SIZE(prof%depth)
           end if !(btma > 1)
+
+
           !-- SALT check
           if (btmc > 1 .and.  SIZE(prof%salt) .ne. 0) then
              cobs_sspl = cspline(cobs_dep(:btmc), cobs_salt(x,y,:btmc,mon))
@@ -348,8 +355,12 @@ CONTAINS
              !--- Interpolate to obs depth
              cobs_sspl_off = cspline(cobs_dep(:btmd), cobs_soff(x,y,:btmd,mon))
              cobs_sinp_off = cobs_sspl_off%interp(prof%depth, check=.true.)
-             !==> gross check, 
-             vsalt : do k = 1, SIZE(prof%depth)
+             !==> gross check,
+             vsalt : do k = 1, SIZE(prof%salt)
+
+                ! ignore this level if there is no defined salinity
+                IF (prof%salt(k) == PROF_UNDEF) CYCLE
+
                 cdif = ABS(prof%salt(k)-cobs_sinp(k))
                 coff = MAX(cobs_gros_MIN_S, &
                            MIN(cobs_gros_MAX_S,cobs_gros_sdv_S*cobs_sinp_off(k))) 
@@ -371,17 +382,6 @@ CONTAINS
              CALL obs_rej%push_back(prof)
              CYCLE global
           endif
-          !-- dbg
-         !PRINT *, 'IN qc_global , i= ',  &
-         !      prof%date
-         !if (mod(i,5000) == 0) PRINT *, 'IN qc_global , i= ', &
-         !    SIZE(cobs_tinp), size(prof%temp),btma,btmb,btmc,btmd, &
-         !    prof%id,prof%lon,prof%lat,prof%date,prof%tag, &
-         ! !  cobs_tinp, prof%temp, cobs_temp(x,y,:btma,mon), &
-         ! !  cobs_temp(x,y,:btma,mon), cobs_toff(x,y,:btmb,mon), &
-         ! !  cobs_tinp_off
-         !    cobs_sinp, prof%salt, cobs_salt(x,y,:btmc,mon), &
-         !    cobs_soff(x,y,:btmd,mon), cobs_sinp_off
 
        else ! (ck_srch)
           bad_gb_outbound = bad_gb_outbound + 1
