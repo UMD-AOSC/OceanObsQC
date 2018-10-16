@@ -1,3 +1,6 @@
+!=============================================================================
+!> World Ocean Database profile reader
+!-----------------------------------------------------------------------------
 MODULE obs_reader_wod_mod
   USE obs_reader_mod
   USE profile_mod
@@ -6,37 +9,41 @@ MODULE obs_reader_wod_mod
   IMPLICIT NONE
   PRIVATE
 
+  
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
   TYPE, EXTENDS(obs_reader), PUBLIC :: obs_reader_wod
    CONTAINS
      PROCEDURE, NOPASS :: name => wod_get_name
-     PROCEDURE         :: init => wod_init
-     PROCEDURE         :: obs_read => wod_read
+     PROCEDURE, NOPASS :: init => wod_init
+     PROCEDURE, NOPASS :: obs_read => wod_read
   END TYPE obs_reader_wod
   !=============================================================================
 
 
-  REAL :: WOD_UNDEF_REAL = -9.99e36
-  INTEGER :: WOD_UNDEF_INT = -999.9
+  REAL,    PARAMETER :: WOD_UNDEF_REAL = -9.99e36
+  INTEGER, PARAMETER :: WOD_UNDEF_INT = -999.9
 
+  
+  INTEGER :: bad_lvl_D ! number of levels discarded due to qc flag for depth
+  INTEGER :: bad_lvl_T ! number of temperature levels discarded due to qc flag for temperature
+  INTEGER :: bad_lvl_S ! number of salinity levels discarded due to qc flag for salinity
+  INTEGER :: bad_pfl   ! number of complete profiles discarded due to bad qc flag for whole profile
 
+  
   ! parameters read in from the namelist
-  LOGICAL :: use_bad_qc     = .FALSE.
-  LOGICAL :: use_bad_qc_lvl = .FALSE.
+  LOGICAL :: use_bad_qc_pfl = .FALSE. !< if TRUE, profiles with bad WOD qc flags will be kept
+  LOGICAL :: use_bad_qc_lvl = .FALSE. !< if TRUE, individual levels with bad WOD qc flags will be kept
 
-  INTEGER :: bad_lvl_D
-  INTEGER :: bad_lvl_T
-  INTEGER :: bad_lvl_S
-  INTEGER :: bad_pfl
 
+  
 CONTAINS
 
 
 
   !=============================================================================
-  !>
+  !> Gets the name of this reader plugin
   !-----------------------------------------------------------------------------
   FUNCTION wod_get_name() RESULT(name)
     CHARACTER(:), ALLOCATABLE :: name
@@ -47,15 +54,12 @@ CONTAINS
 
 
   !=============================================================================
-  !>
+  !> Initialize the WOD reader by loading in its section of a namelist
   !-----------------------------------------------------------------------------
-  SUBROUTINE wod_init(self, nmlfile)
-    CLASS(obs_reader_wod) :: self
+  SUBROUTINE wod_init(nmlfile)
     INTEGER, INTENT(in) :: nmlfile
 
-    INTEGER :: i
-
-    NAMELIST /obs_reader_wod/ use_bad_qc, use_bad_qc_lvl
+    NAMELIST /obs_reader_wod/ use_bad_qc_pfl, use_bad_qc_lvl
     
     READ(nmlfile, obs_reader_wod)
     PRINT obs_reader_wod
@@ -66,10 +70,9 @@ CONTAINS
   
   
   !=============================================================================
-  !>
+  !> Read in a given WOD profile file, returning a vector of valid profiles
   !-----------------------------------------------------------------------------
-  SUBROUTINE wod_read(self, filename, obs)
-    CLASS(obs_reader_wod) :: self
+  SUBROUTINE wod_read(filename, obs)
     CHARACTER(len=*),  INTENT(in)    :: filename
     TYPE(vec_profile), INTENT(inout) :: obs
 
@@ -103,13 +106,13 @@ CONTAINS
 
     PRINT *, ""
     IF(bad_pfl > 0)  &
-         PRINT '(I8,A)', bad_pfl, ' profiles omitted due to bad WOD qc flag'
+         PRINT '(A,I8,A)', "WOD reader: ", bad_pfl, ' profiles omitted due to bad WOD qc flag'
     IF(bad_lvl_D > 0)  &
-         PRINT '(I8,A)', bad_lvl_D, ' T/S levels omitted due to bad WOD depth qc flag'
+         PRINT '(A,I8,A)', "WOD reader: ", bad_lvl_D, ' T/S levels omitted due to bad WOD depth qc flag'
     IF(bad_lvl_T > 0)  &
-         PRINT '(I8,A)', bad_lvl_T, ' T levels omitted due to bad WOD qc flag'
+         PRINT '(A,I8,A)', "WOD reader: ", bad_lvl_T, ' T levels omitted due to bad WOD qc flag'
     IF(bad_lvl_S > 0)  &
-         PRINT '(I8,A)', bad_lvl_S, ' S levels omitted due to bad WOD qc flag'
+         PRINT '(A,I8,A)', "WOD reader: ", bad_lvl_S, ' S levels omitted due to bad WOD qc flag'
 
   END SUBROUTINE wod_read
   !=============================================================================
@@ -117,7 +120,7 @@ CONTAINS
 
 
   !=============================================================================
-  !>
+  !> Reads a single observation profile from the input file stream
   !-----------------------------------------------------------------------------
   SUBROUTINE read_wod_rec(unit, ob, valid, more)
     INTEGER, INTENT(in) :: unit
@@ -219,7 +222,7 @@ CONTAINS
 
        ! variable qc
        tmp_i = readInt(1)
-       IF (.NOT. use_bad_qc .AND. tmp_i /= 0) THEN
+       IF (.NOT. use_bad_qc_pfl .AND. tmp_i /= 0) THEN
           valid = .FALSE.
           bad_pfl = bad_pfl + 1
        END IF       
@@ -381,6 +384,9 @@ CONTAINS
 
 
     !===========================================================================
+    !> read a single floating point value from the current position (pos) of
+    !! the string (ascii). "pos" will but updated afterward
+    !---------------------------------------------------------------------------
     FUNCTION readReal() RESULT(res)
       REAL :: res
       INTEGER :: num_sig, num_total, num_prec
