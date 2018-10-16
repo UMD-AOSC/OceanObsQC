@@ -79,9 +79,10 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out)
+  SUBROUTINE qc_step_check(obs_in, obs_out, obs_rej)
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
+    TYPE(vec_profile), INTENT(inout) :: obs_rej
 
     INTEGER :: i, j, nlev, k, l
     TYPE(profile), POINTER :: prof
@@ -146,7 +147,13 @@ CONTAINS
        END IF
 
        ! only keep if density inversion not found
-       IF(keep) CALL obs_out%push_back(prof)
+       IF(keep) THEN
+          CALL obs_out%push_back(prof)
+       ELSE
+          prof%tag = -1 !TODO, give valid tag
+          CALL obs_rej%push_back(prof)
+       END IF
+
 
     END DO do_prof
 

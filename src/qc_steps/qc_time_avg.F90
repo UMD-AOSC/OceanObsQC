@@ -79,9 +79,10 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out)
+  SUBROUTINE qc_step_check(obs_in, obs_out, obs_rej)
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
+    TYPE(vec_profile), INTENT(inout) :: obs_rej
 
     REAL, PARAMETER :: re = 6371.3d3 !< radius of earth (meters)
     REAL, PARAMETER :: deg2rad = 4.0*ATAN(1.0)/180.0!< multiply by to convert degrees to radians

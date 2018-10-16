@@ -19,6 +19,8 @@
 !===============================================================================
 
 &obs_reader_wod
+ use_bad_qc_pfl=F
+ use_bad_qc_lvl=F
 /
 
 
@@ -37,15 +39,59 @@
   !  individual test
 
   min_levels=3      ! minimum number of vertical levels required
-  max_depth=7000.0  ! maximum depth allowed (meters)
+  max_depth=6000.0  ! maximum depth allowed (meters)
   max_start=36.0    ! first level must be above this depth (meters)
   max_gap=500.0     ! no vertical gaps larger than this allowed (meters)
 /
 
+&qc_global
+ ! Check for gross off-set from global climate
+
+ do_qc_global=T     ! Check for max off-set from global climate
+ cobs_cord="SPHERICAL"
+ cobs_dx = 1.0
+ cobs_dy = 1.0
+ cobs_x0 = 0.5
+ cobs_fmax = 2
+ cobs_gros_sdv_T = 5.0
+ cobs_gros_min_T = 3.0
+ cobs_gros_max_T = 20.0
+ cobs_gros_sdv_S = 5.0
+ cobs_gros_min_S = 2.0
+ cobs_gros_max_S = 7.0 
+ cobs_TS_file="TRANS-WOA09-TS.nc"
+ cobs_lon_dim="imp"
+ cobs_lat_dim="jmp"
+ cobs_dep_dim="kmp"
+ cobs_mon_dim="Time"
+ cobs_lon_var="lon"
+ cobs_lat_var="lat"
+ cobs_dep_var="depth"
+ cobs_temp_var="temp"
+ cobs_salt_var="salt"
+ cobs_toff_var="tsdv"
+ cobs_soff_var="ssdv"
+/
+
+
+&qc_profile
+ ! check for vertical structures
+
+ do_qc_profile=T
+ prf_trlatN=60.0
+ prf_trlatS=-60.0
+ prf_trTmin=0.05
+ prf_trSmin=0.005
+ prf_T1spmax=0.5
+ prf_S1spmax=0.1
+ prf_Tbspmax=0.5 
+ prf_Sbspmax=0.1
+ prf_Trsmx=1.75
+ prf_Srsmx=1.75
+/
 
 &qc_density
   ! If a profile has both salinity and temperature, check to make sure that
   ! there is not a density inversion in subsequent levels
-
   dens_inv_tol = 0.1 ! tolerance when detecting density inversions (kg/m^3)
 /

@@ -31,10 +31,13 @@ PROGRAM obsqc
 
   CHARACTER(len=1024) :: in_filename
   CHARACTER(len=1024) :: out_filename
+  CHARACTER(len=1024) :: rej_filename
 
-  INTEGER :: i, nmlfile
+  INTEGER :: i, j, nmlfile, err
   REAL :: timer_start, timer_end
-  TYPE(vec_profile) :: obs, obs2
+  TYPE(vec_profile) :: obs, obs_good, obs_rej
+  TYPE(profile), POINTER :: prof
+  INTEGER :: rm_count(6)
 
   TYPE(obs_reader_ptr) :: obs_reader_wrapper
   TYPE(obs_writer_ptr) :: obs_writer_wrapper
@@ -68,6 +71,7 @@ PROGRAM obsqc
   CALL get_command_ARGUMENT(1, VALUE=in_filename)
   CALL get_command_ARGUMENT(2, VALUE=out_filename)
 
+  rej_filename=TRIM('rej_') // TRIM(out_filename)
 
   ! open the namelist file
   ! grab the main parameters we need
@@ -98,6 +102,9 @@ PROGRAM obsqc
      STOP 1
   END IF
   PRINT *, "Using: ", selected_obs_reader%name()
+  PRINT *, ""
+  REWIND(nmlfile)
+  CALL selected_obs_reader%init(nmlfile)
 
 
   ! Print a list of all obs writer plugins registered,
@@ -135,6 +142,8 @@ PROGRAM obsqc
   CALL cpu_TIME(timer_start)
   CALL selected_obs_reader%get(TRIM(in_filename), &
        read_start_date, read_end_date, obs)
+  PRINT *,""
+  PRINT *, "Profiles read in:"
   CALL prof_stats(obs)
   CALL cpu_TIME(timer_end)
   PRINT *, ""
@@ -146,9 +155,11 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Running QC step plugins"
   PRINT *, "---------------------------------------------"
+  obs_rej  = vec_profile()
   DO i=1, qc_steps%SIZE()
      CALL cpu_TIME(timer_start)
-     obs2 = vec_profile()
+
+     obs_good = vec_profile()
      qc_step_wrapper = qc_steps%get(i)
 
      PRINT *, ""
@@ -161,10 +172,52 @@ PROGRAM obsqc
      CALL qc_step_wrapper%p%init(nmlfile)
 
      ! perform the QC step
-     CALL qc_step_wrapper%p%check(obs, obs2)
+     CALL qc_step_wrapper%p%check(obs, obs_good, obs_rej)
+
+     ! check that the variables of each profile are good
+     obs = vec_profile()
+     rm_count = 0
+     each_profile: DO j = 1, obs_good%SIZE()
+        prof => obs_good%of(j)
+
+        ! remove bad variables /levels
+        CALL prof%check(err)
+
+        SELECT CASE(err)
+        CASE (PROF_CHECK_NO_VARS)
+           ! don't add this profile to the valid obs
+           rm_count(1) = rm_count(1) + 1
+           CALL obs_rej%push_back(prof)
+           CYCLE each_profile
+        CASE (PROF_CHECK_NO_T)
+           rm_count(2) = rm_count(2) + 1
+        CASE (PROF_CHECK_NO_S)
+           rm_count(3) = rm_count(3) + 1
+!        CASE (PROF_CHECK_RMLVL)
+!           rm_count(4) = rm_count(4) + 1
+        END SELECT
+
+        CALL obs%push_back(prof)
+     END DO each_profile
+
+     ! were any profiles modified?
+     IF (SUM(rm_count) > 0 ) THEN
+        PRINT *, ""
+        PRINT '(A)', "WARNING: The following errors occurred because invalid profiles were"
+        PRINT '(A)', "         returned from the qc step. These errors should not happen."
+        PRINT '(A)', "         Check the validity of the code for this QC step."
+     END IF
+     IF (rm_count(1) > 0) &
+          PRINT '(A,I8,A)', "WARNING: ", rm_count(1), " profiles removed due to no valid T or S values."
+     IF (rm_count(2) > 0) &
+          PRINT '(A,I8,A)', "WARNING: ", rm_count(2), " T profiles removed due to constant PROF_UNDEF profile."
+     IF (rm_count(3) > 0) &
+          PRINT '(A,I8,A)', "WARNING: ", rm_count(3), " S profiles removed due to constant PROF_UNDEF profile."
+!     IF (rm_count(4) > 0) &
+!          PRINT '(A,I8,A)', "WARNING: ", rm_count(4), " individual levels removed due to PROF_UNDEF values."
 
      ! get ready for next cycle
-     obs = obs2
+
      CALL cpu_TIME(timer_end)
      PRINT *, ""
      PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
@@ -178,9 +231,20 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Writing profiles"
   PRINT *, "---------------------------------------------"
+
+  PRINT *, "Good profiles written:"
   CALL cpu_TIME(timer_start)
   CALL prof_stats(obs)
   CALL selected_obs_writer%obs_write(out_filename, obs)
+  CALL cpu_TIME(timer_end)
+  PRINT *, ""
+  PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
+  PRINT *, ""
+
+  PRINT *, "Rejected profiles written:"
+  CALL cpu_TIME(timer_start)
+  CALL prof_stats(obs_rej)
+  CALL selected_obs_writer%obs_write(rej_filename, obs_rej)
   CALL cpu_TIME(timer_end)
   PRINT *, ""
   PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
@@ -200,13 +264,12 @@ CONTAINS
     INTEGER :: prf_t_cnt, prf_s_cnt, obs_t_cnt, obs_s_cnt
     TYPE(profile), POINTER :: prf
 
-
     prf_t_cnt = 0
     prf_s_cnt = 0
     obs_t_cnt = 0
     obs_s_cnt = 0
 
-    DO i=1,obs%SIZE()
+    DO i=1,profs%SIZE()
        prf => obs%of(i)
        IF ( SIZE(prf%temp) > 0) THEN
           prf_t_cnt = prf_t_cnt + 1

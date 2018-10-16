@@ -13,7 +13,8 @@ MODULE obs_reader_bufr_mod
   TYPE, EXTENDS(obs_reader), PUBLIC :: obs_reader_bufr
    CONTAINS
      PROCEDURE, NOPASS :: name => bufr_get_name
-     PROCEDURE         :: obs_read => bufr_read
+     PROCEDURE, NOPASS :: init => bufr_init
+     PROCEDURE, NOPASS :: obs_read => bufr_read
   END TYPE obs_reader_bufr
   !=============================================================================
 
@@ -38,8 +39,18 @@ CONTAINS
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
-  SUBROUTINE bufr_read(self, filename, obs)
-    CLASS(obs_reader_bufr) :: self
+  SUBROUTINE bufr_init(nmlfile)
+    INTEGER, INTENT(in) :: nmlfile
+
+    ! TODO, process namelist options
+  END SUBROUTINE bufr_init
+  !=============================================================================
+
+
+  !=============================================================================
+  !>
+  !-----------------------------------------------------------------------------
+  SUBROUTINE bufr_read(filename, obs)
     CHARACTER(len=*),  INTENT(in)    :: filename
     TYPE(vec_profile), INTENT(inout) :: obs
 
@@ -66,18 +77,22 @@ CONTAINS
     DO
        CALL readmg(file, c1, idate, iret)
        IF (iret /= 0) EXIT
-
        DO
           CALL readsb(file, iret)
           IF (iret /= 0) EXIT
 
           ! read in the profiles, in a way depending on the profile type
           valid = .FALSE.
-          IF (c1 == "NC031001") THEN
+          IF (c1 == "NC031001" .OR. &
+               c1 == "NC031004" ) THEN
              CALL process_bathytesac(file, ob, valid)
              ob%plat = PLAT_BATHY
           ELSE IF (&
                c1 == "NC031002" .OR. &
+               c1 == "NC031006" ) THEN
+             CALL process_bathytesac(file, ob, valid)
+             ob%plat = PLAT_TESAC
+          ELSE IF (&
                c1 == "NC001002" .OR. &
                c1 == "DBUOY" ) THEN
              CALL process_bathytesac(file, ob, valid)

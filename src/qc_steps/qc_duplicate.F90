@@ -77,9 +77,10 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out)
+  SUBROUTINE qc_step_check(obs_in, obs_out, obs_rej)
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
+    TYPE(vec_profile), INTENT(inout) :: obs_rej
 
     INTEGER :: i, j
     TYPE(profile), POINTER :: prof1, prof2
@@ -138,6 +139,7 @@ CONTAINS
           prof1 => obs_in%of(i)
           CALL obs_out%push_back(prof1)
        ELSE
+          CALL obs_rej%push_back(prof1)
           count = count + 1
        END IF
     END DO
