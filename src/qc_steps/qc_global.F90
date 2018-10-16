@@ -215,7 +215,7 @@ CONTAINS
 
     INTEGER :: i, j, k, btma, btmb, btmc, btmd, mon, mdt
     LOGICAL :: ck_srch
-    TYPE(profile),POINTER :: prof
+    TYPE(profile), POINTER :: prof
 
     ! read in from namelist
     INTEGER :: obid_t  = 2210
@@ -227,7 +227,6 @@ CONTAINS
     INTEGER :: bad_gb_gross_T, bad_gb_noprof_off_T
     INTEGER :: bad_gb_gross_S, bad_gb_noprof_off_S
     INTEGER :: x, y, z
-    INTEGER :: good_check_T, good_check_S
     REAL :: nbig = 1.0e5
     REAL :: hbig = 1.0e5
     REAL :: s, pt, v, odep, coff, cdif
@@ -274,13 +273,21 @@ CONTAINS
        !---> obs(-180 - 180) cobs(-180 - 180) : WOA13
        CALL sphgrid_lalo2xy(alon, alat, cobs_dx, cobs_dy, cobs_dx, x, y, ck_srch)
 
-       IF (ck_srch) THEN
-          ! if a good location was found...
+       IF (.NOT. ck_srch) THEN
+          ! If no good closest point found
+          bad_gb_outbound = bad_gb_outbound + 1
+          prof%tag = 50
+          CALL obs_rej%push_back(prof)
+          CYCLE global
 
-          good_check_T = 1
-          good_check_S = 1
+       ELSE ! (ck_srch)
+          ! otherwise a good location was found...
 
-          !--- temp
+
+          !---------------------------------------------------------------------
+          ! temperature check
+          !---------------------------------------------------------------------
+
           !--- find the bottom depth of cobs point
           DO btma = cobs_nz,1,-1
              IF (ABS(cobs_temp(x,y,btma,mon)) <= nbig) EXIT
@@ -295,12 +302,14 @@ CONTAINS
              CALL obs_rej%push_back(prof)
              CYCLE global
           ENDIF
+
           !--- Interpolate to obs depth
           !--- obs T is in-situ T
           !-- TEMP check
           IF (btma > 1 .AND.  SIZE(prof%temp) .NE. 0) THEN
              cobs_tspl = cspline(cobs_dep(:btma), cobs_temp(x,y,:btma,mon))
              cobs_tinp = cobs_tspl%interp(prof%depth, check=.TRUE.)
+
              !--- toff
              !--- check bottom of off-set data
              DO btmb = cobs_nz,1,-1
@@ -313,9 +322,11 @@ CONTAINS
                 CALL obs_rej%push_back(prof)
                 CYCLE global
              ENDIF
+
              !--- Interpolate to obs depth
              cobs_tspl_off = cspline(cobs_dep(:btmb), cobs_toff(x,y,:btmb,mon))
              cobs_tinp_off = cobs_tspl_off%interp(prof%depth, check=.TRUE.)
+
              !==> gross check,
              vtemp : DO k = 1, SIZE(prof%temp)
                 ! ignore this level if there is no defined temperature
@@ -324,22 +335,35 @@ CONTAINS
                 cdif = ABS(prof%temp(k)-cobs_tinp(k))
                 coff = MAX(cobs_gros_MIN_T, &
                      MIN(cobs_gros_MAX_T,cobs_gros_sdv_T*cobs_tinp_off(k)))
+
                 IF (cdif > coff) THEN
+                   ! level failing the gross check
+                   ! TODO, add option to remove level, instead of flagging
+                   ! entire variable bad
+                   ! TODO, need to copy the profile before adding it to the
+                   ! reject vector, otherwise the actual profile values will
+                   ! not be retained (prof holds pointers to object, so the
+                   ! contents of prof are currently being modified after
+                   ! pushed back), same applies to salinity below.
                    bad_gb_gross_T = bad_gb_gross_T + 1
                    prof%tag = 51
                    CALL obs_rej%push_back(prof)
-                   good_check_T = 0
-                   prof%temp = PROF_UNDEF
+                   DEALLOCATE(prof%temp)
+                   ALLOCATE(prof%temp(0))
                    EXIT vtemp
                 ENDIF
+
              ENDDO vtemp ! k = 1, SIZE(prof%depth)
           END IF !(btma > 1)
 
 
-          !-- SALT check
+          !---------------------------------------------------------------------
+          ! salinity check
+          !---------------------------------------------------------------------
           IF (btmc > 1 .AND.  SIZE(prof%salt) .NE. 0) THEN
              cobs_sspl = cspline(cobs_dep(:btmc), cobs_salt(x,y,:btmc,mon))
              cobs_sinp = cobs_sspl%interp(prof%depth, check=.TRUE.)
+
              !--- soff
              !--- check bottom of off-set data
              DO btmd = cobs_nz,1,-1
@@ -352,9 +376,11 @@ CONTAINS
                 CALL obs_rej%push_back(prof)
                 CYCLE global
              ENDIF
+
              !--- Interpolate to obs depth
              cobs_sspl_off = cspline(cobs_dep(:btmd), cobs_soff(x,y,:btmd,mon))
              cobs_sinp_off = cobs_sspl_off%interp(prof%depth, check=.TRUE.)
+
              !==> gross check,
              vsalt : DO k = 1, SIZE(prof%salt)
 
@@ -364,40 +390,42 @@ CONTAINS
                 cdif = ABS(prof%salt(k)-cobs_sinp(k))
                 coff = MAX(cobs_gros_MIN_S, &
                      MIN(cobs_gros_MAX_S,cobs_gros_sdv_S*cobs_sinp_off(k)))
+
                 IF (cdif > coff) THEN
+                   ! level failing the gross check
+                   ! TODO, add option to remove level, instead of flagging
+                   ! entire variable bad
                    bad_gb_gross_S = bad_gb_gross_S + 1
                    prof%tag = 55
                    CALL obs_rej%push_back(prof)
-                   good_check_S = 0
-                   prof%salt = PROF_UNDEF
+                   DEALLOCATE(prof%salt)
+                   ALLOCATE(prof%salt(0))
                    EXIT vsalt
                 ENDIF ! (cdif > coff)
+
              ENDDO vsalt ! k = 1, SIZE(prof%depth)
           END IF !(btmc > 1)
+
           !--- keep T or S if good, and reject if both bad.
           !--- rej file of rejected T or S can be bigger than REAL rejected profile of both bad.
-          IF (good_check_T + good_check_S == 0) THEN
+          IF (SIZE(prof%temp) == 0 .and. SIZE(prof%salt) == 0) THEN
              bad_gb_gross = bad_gb_gross + 1
              prof%tag = 56
              CALL obs_rej%push_back(prof)
              CYCLE global
           ENDIF
 
-       ELSE ! (ck_srch)
-          bad_gb_outbound = bad_gb_outbound + 1
-          prof%tag = 50
-          CALL obs_rej%push_back(prof)
-          CYCLE global
        ENDIF ! (ck_srch)
 
        CALL obs_out%push_back(prof)
 
-       DEALLOCATE(cobs_tinp)
-       DEALLOCATE(cobs_tinp_off)
-       DEALLOCATE(cobs_sinp)
-       DEALLOCATE(cobs_sinp_off)
+       IF(ALLOCATED(cobs_tinp)) DEALLOCATE(cobs_tinp)
+       IF(ALLOCATED(cobs_tinp_off)) DEALLOCATE(cobs_tinp_off)
+       IF(ALLOCATED(cobs_sinp)) DEALLOCATE(cobs_sinp)
+       IF(ALLOCATED(cobs_sinp_off)) DEALLOCATE(cobs_sinp_off)
 
     END DO global ! i = 1, obs_in%SIZE()
+
 
     ! print out stats if any profiles were removed
     ! NOTE: these should be printed in the order that they were checked

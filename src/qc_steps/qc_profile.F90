@@ -114,7 +114,6 @@ CONTAINS
 
     INTEGER :: i, k, kb, kn
     REAL :: trTmin, trTmax, trSmin, trSmax, dtdz, dsdz, dvns, dvrs
-    INTEGER :: tr_goodT, tr_goodS
     TYPE(profile),POINTER :: prof
     INTEGER :: bad_prf_trconst_T, bad_prf_trconst_S, bad_prf_trconst
     INTEGER :: bad_prf_T1sp, bad_prf_Tbsp, bad_prf_S1sp, bad_prf_Sbsp
@@ -141,11 +140,13 @@ CONTAINS
     !--- main loop
     main : DO i = 1, obs_in%SIZE()
        prof => obs_in%of(i)
+
+       !------------------------------------------------------------------------
        !--- $ check constant profile
-       tr_goodT = 1
-       tr_goodS = 1
+       !------------------------------------------------------------------------
        IF (prof%lat <= prf_trlatN .AND. prof%lat >= prf_trlatS) THEN
-          !---
+
+          !---Temperature
           IF (SIZE(prof%temp) /= 0) THEN
              trTmin = prof%temp(1)
              trTmax = prof%temp(1)
@@ -153,7 +154,21 @@ CONTAINS
                 IF (trTmin > prof%temp(k)) trTmin = prof%temp(k)
                 IF (trTmax < prof%temp(k)) trTmax = prof%temp(k)
              ENDDO
+             IF (ABS(trTmax-trTmin) < prf_trTmin) THEN
+                ! TODO, need to copy the profile before adding it to the
+                ! reject vector, otherwise the actual profile values will
+                ! not be retained (prof holds pointers to object, so the
+                ! contents of prof are currently being modified after
+                ! pushed back), same applies to salinity below.
+                bad_prf_trconst_T = bad_prf_trconst_T + 1
+                prof%tag = 60
+                CALL obs_rej%push_back(prof)
+                DEALLOCATE(prof%temp)
+                ALLOCATE(prof%temp(0))
+             END IF
           ENDIF ! (SIZE(prof%temp) /= 0)
+
+          ! Salinity
           IF (SIZE(prof%salt) /= 0) THEN
              trSmin = prof%salt(1)
              trSmax = prof%salt(1)
@@ -161,34 +176,31 @@ CONTAINS
                 IF (trSmin > prof%salt(k)) trSmin = prof%salt(k)
                 IF (trSmax < prof%salt(k)) trSmax = prof%salt(k)
              ENDDO
-          ENDIF ! (SIZE(prof%salt) /= 0)
-          !--- for Temp
-          IF ((SIZE(prof%temp) /= 0) .AND. &
-               (ABS(trTmax-trTmin) < prf_trTmin)) THEN
-             tr_goodT = 0
-             bad_prf_trconst_T = bad_prf_trconst_T + 1
-             prof%tag = 60
-             CALL obs_rej%push_back(prof)
-             prof%temp = PROF_UNDEF
-          ENDIF ! (trTmax-reTmin < prf_trTmin)
-          !--- for Salt
-          IF ((SIZE(prof%salt) /= 0) .AND. &
-               (ABS(trSmax-trSmin) < prf_trSmin)) THEN
-             tr_goodS = 0
-             bad_prf_trconst_S = bad_prf_trconst_S + 1
-             prof%tag = 61
-             CALL obs_rej%push_back(prof)
-             prof%salt = PROF_UNDEF
+             IF (ABS(trSmax-trSmin) < prf_trSmin) THEN
+                bad_prf_trconst_S = bad_prf_trconst_S + 1
+                prof%tag = 61
+                CALL obs_rej%push_back(prof)
+                DEALLOCATE(prof%salt)
+                ALLOCATE(prof%salt(0))
+             ENDIF ! (SIZE(prof%salt) /= 0)
           ENDIF ! (trSmax-trSmin < prf_trSmin)
-          IF (tr_goodT + tr_goodS == 0) THEN
+
+          IF(SIZE(prof%salt) == 0 .AND. SIZE(prof%temp) == 0) THEN
+             !IF (tr_goodT + tr_goodS == 0) THEN
              bad_prf_trconst = bad_prf_trconst + 1
              prof%tag = 62
              CALL obs_rej%push_back(prof)
              CYCLE main
           ENDIF
+
        ENDIF ! (pronf%lat <= prf_trlatN .and. pronf%lat >= prf_trlatS)
-       !--- $ check spikiness in Temp and Salt
+
+
+       !------------------------------------------------------------------------
+       !--- $ check spikiness in Temp
+       !------------------------------------------------------------------------
        IF (SIZE(prof%temp) >= 2 .AND. prof%temp(1) /= PROF_UNDEF) THEN
+
           !-- dtdz at surface
           dtdz = (prof%temp(1)-prof%temp(2))/(prof%depth(2)-prof%depth(1))
           IF (ABS(dtdz) > prf_T1spmax) THEN
@@ -198,6 +210,7 @@ CONTAINS
              prof%tag = 64
              CALL obs_rej%push_back(prof)
           ENDIF ! (ABS(dtdz) > prf_T1spmax)
+
           !-- dtdz at bottom
           kb = SIZE(prof%temp)
           dtdz = (prof%temp(kb-1)-prof%temp(kb))/(prof%depth(kb)-prof%depth(kb-1))
@@ -208,6 +221,7 @@ CONTAINS
              CALL obs_rej%push_back(prof)
              prof%temp(kb) = PROF_UNDEF
           ENDIF ! (ABS(dtdz) > prf_Tbspmax)
+
           !-- noise check base on rms of dtdz**2
           dvns = 0.0
           kn = 0
@@ -227,6 +241,10 @@ CONTAINS
              prof%temp = PROF_UNDEF
           ENDIF ! (dvrs > prf_Trsmx)
        ENDIF ! (SIZE(prof%temp) >= 2)
+
+       !------------------------------------------------------------------------
+       !--- $ check spikiness in Salt
+       !------------------------------------------------------------------------
        IF (SIZE(prof%salt) >= 2 .AND. prof%salt(1) /= PROF_UNDEF) THEN
           !-- dsdz at surface
           dsdz = (prof%salt(1)-prof%salt(2))/(prof%depth(2)-prof%depth(1))
@@ -237,6 +255,7 @@ CONTAINS
              prof%tag = 66
              CALL obs_rej%push_back(prof)
           ENDIF ! (ABS(dsdz) > prf_S1spmax)
+
           !-- dsdz at bottom
           kb = SIZE(prof%salt)
           dsdz = (prof%salt(kb-1)-prof%salt(kb))/(prof%depth(kb)-prof%depth(kb-1))
@@ -247,6 +266,7 @@ CONTAINS
              CALL obs_rej%push_back(prof)
              prof%salt(kb) = PROF_UNDEF
           ENDIF ! (ABS(dsdz) > prf_Sbspmax)
+
           !-- noise check base on rms of dsdz**2
           dvns = 0.0
           kn = 0
@@ -263,11 +283,16 @@ CONTAINS
              bad_prf_Svns = bad_prf_Svns + 1
              prof%tag = 69
              CALL obs_rej%push_back(prof)
-             prof%salt = PROF_UNDEF
+             DEALLOCATE(prof%salt)
+             ALLOCATE(prof%salt(0))
           ENDIF ! (dvrs > prf_Srsmx)
        ENDIF ! (SIZE(prof%salt) >= 2)
 
-       CALL obs_out%push_back(prof)
+       ! make sure there are either valid T or S values remaining
+       IF (SIZE(prof%salt)+SIZE(prof%temp) > 0) THEN
+          CALL obs_out%push_back(prof)
+       END IF
+
     END DO main ! i = 1, obs_in%SIZE()
     !---
 

@@ -193,8 +193,8 @@ PROGRAM obsqc
            rm_count(2) = rm_count(2) + 1
         CASE (PROF_CHECK_NO_S)
            rm_count(3) = rm_count(3) + 1
-        CASE (PROF_CHECK_RMLVL)
-           rm_count(4) = rm_count(4) + 1
+!        CASE (PROF_CHECK_RMLVL)
+!           rm_count(4) = rm_count(4) + 1
         END SELECT
 
         CALL obs%push_back(prof)
@@ -213,8 +213,8 @@ PROGRAM obsqc
           PRINT '(A,I8,A)', "WARNING: ", rm_count(2), " T profiles removed due to constant PROF_UNDEF profile."
      IF (rm_count(3) > 0) &
           PRINT '(A,I8,A)', "WARNING: ", rm_count(3), " S profiles removed due to constant PROF_UNDEF profile."
-     IF (rm_count(4) > 0) &
-          PRINT '(A,I8,A)', "WARNING: ", rm_count(4), " individual levels removed due to PROF_UNDEF values."
+!     IF (rm_count(4) > 0) &
+!          PRINT '(A,I8,A)', "WARNING: ", rm_count(4), " individual levels removed due to PROF_UNDEF values."
 
      ! get ready for next cycle
 
