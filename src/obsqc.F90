@@ -101,8 +101,11 @@ PROGRAM obsqc
      STOP 1
   END IF
   PRINT *, "Using: ", selected_obs_reader%name()
+  PRINT *, ""
+  REWIND(nmlfile)
+  CALL selected_obs_reader%init(nmlfile)
 
-
+  
   ! Print a list of all obs writer plugins registered,
   ! and determine which plugin to use
   PRINT *, ""
@@ -119,9 +122,9 @@ PROGRAM obsqc
      PRINT *, 'ERROR: observation writer type "', obs_writer_type, &
           '" not found. Check the namelist.'
      STOP 1
-  END IF
+  END IF  
   PRINT *, "Using: ", selected_obs_writer%name()
-
+  
 
   ! register all the qc_step plugins
   PRINT *, ""

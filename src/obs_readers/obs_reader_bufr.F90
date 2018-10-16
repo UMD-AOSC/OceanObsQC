@@ -13,6 +13,7 @@ MODULE obs_reader_bufr_mod
   TYPE, EXTENDS(obs_reader), PUBLIC :: obs_reader_bufr
    CONTAINS
      PROCEDURE, NOPASS :: name => bufr_get_name
+     PROCEDURE         :: init => bufr_init
      PROCEDURE         :: obs_read => bufr_read
   END TYPE obs_reader_bufr
   !=============================================================================
@@ -35,6 +36,18 @@ CONTAINS
 
 
 
+  !=============================================================================
+  !>
+  !-----------------------------------------------------------------------------
+  SUBROUTINE bufr_init(self, nmlfile)
+    CLASS(obs_reader_nc) :: self
+    INTEGER, INTENT(in) :: nmlfile
+
+    ! TODO, process namelist options
+  END SUBROUTINE bufr_init  
+  !=============================================================================
+
+  
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------

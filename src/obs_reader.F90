@@ -17,6 +17,7 @@ MODULE obs_reader_mod
 
      ! procedures that must be defined by the subclass
      PROCEDURE(I_reader_getstr), NOPASS, DEFERRED :: name
+     PROCEDURE(I_reader_init),           DEFERRED :: init
      PROCEDURE(I_reader_read), PRIVATE,  DEFERRED :: obs_read
   END TYPE obs_reader
 
@@ -24,6 +25,12 @@ MODULE obs_reader_mod
      FUNCTION I_reader_getstr()
        CHARACTER(:), ALLOCATABLE :: I_reader_getstr
      END FUNCTION I_reader_getstr
+
+     SUBROUTINE I_reader_init(self, nmlfile)
+       IMPORT obs_reader
+       CLASS(obs_reader) :: self
+       INTEGER, INTENT(in) :: nmlfile
+     END SUBROUTINE I_reader_init
 
      SUBROUTINE I_reader_read(self, filename, obs)
        IMPORT obs_reader, vec_profile

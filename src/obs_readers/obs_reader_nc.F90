@@ -14,6 +14,7 @@ MODULE obs_reader_nc_mod
   TYPE, EXTENDS(obs_reader), PUBLIC :: obs_reader_nc
    CONTAINS
      PROCEDURE, NOPASS :: name => reader_nc_get_name
+     PROCEDURE         :: init => reader_nc_init
      PROCEDURE         :: obs_read => reader_nc_read
   END TYPE obs_reader_nc
   !=============================================================================
@@ -33,6 +34,20 @@ CONTAINS
   END FUNCTION reader_nc_get_name
   !=============================================================================
 
+
+  !=============================================================================
+  !>
+  !-----------------------------------------------------------------------------
+  SUBROUTINE reader_nc_init(self, nmlfile)
+    CLASS(obs_reader_nc) :: self
+    INTEGER, INTENT(in) :: nmlfile
+
+    ! TODO, process namelist options
+  END SUBROUTINE reader_nc_init 
+  !=============================================================================
+
+
+  
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------

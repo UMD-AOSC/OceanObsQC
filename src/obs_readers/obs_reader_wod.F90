@@ -12,6 +12,7 @@ MODULE obs_reader_wod_mod
   TYPE, EXTENDS(obs_reader), PUBLIC :: obs_reader_wod
    CONTAINS
      PROCEDURE, NOPASS :: name => wod_get_name
+     PROCEDURE         :: init => wod_init
      PROCEDURE         :: obs_read => wod_read
   END TYPE obs_reader_wod
   !=============================================================================
@@ -21,6 +22,14 @@ MODULE obs_reader_wod_mod
   INTEGER :: WOD_UNDEF_INT = -999.9
 
 
+  ! parameters read in from the namelist
+  LOGICAL :: use_bad_qc     = .FALSE.
+  LOGICAL :: use_bad_qc_lvl = .FALSE.
+
+  INTEGER :: bad_lvl_D
+  INTEGER :: bad_lvl_T
+  INTEGER :: bad_lvl_S
+  INTEGER :: bad_pfl
 
 CONTAINS
 
@@ -40,15 +49,39 @@ CONTAINS
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
+  SUBROUTINE wod_init(self, nmlfile)
+    CLASS(obs_reader_wod) :: self
+    INTEGER, INTENT(in) :: nmlfile
+
+    INTEGER :: i
+
+    NAMELIST /obs_reader_wod/ use_bad_qc, use_bad_qc_lvl
+    
+    READ(nmlfile, obs_reader_wod)
+    PRINT obs_reader_wod
+    
+  END SUBROUTINE wod_init      
+  !=============================================================================
+
+  
+  
+  !=============================================================================
+  !>
+  !-----------------------------------------------------------------------------
   SUBROUTINE wod_read(self, filename, obs)
     CLASS(obs_reader_wod) :: self
     CHARACTER(len=*),  INTENT(in)    :: filename
     TYPE(vec_profile), INTENT(inout) :: obs
 
-    LOGICAL :: valid
+    LOGICAL :: valid, more
     INTEGER :: unit
 
     TYPE(profile) :: ob
+
+    bad_lvl_D = 0
+    bad_lvl_T = 0
+    bad_lvl_S = 0
+    bad_pfl = 0
 
     ! make sure input file exists
     INQUIRE(file=filename, exist=valid)
@@ -57,16 +90,26 @@ CONTAINS
        STOP 1
     END IF
 
-    ! open file
+    ! open file, and process
     OPEN(newunit=unit, file=filename, action='READ', status='old')
-    valid = .TRUE.
-    DO WHILE(valid)
-       CALL read_wod_rec(unit, ob, valid)
+    more = .TRUE.
+    DO WHILE(more)
+       CALL read_wod_rec(unit, ob, valid, more)
        IF(valid) CALL obs%push_back(ob)
     END DO
 
     ! all done, close file
     CLOSE(unit)
+
+    PRINT *, ""
+    IF(bad_pfl > 0)  &
+         PRINT '(I8,A)', bad_pfl, ' profiles omitted due to bad WOD qc flag'
+    IF(bad_lvl_D > 0)  &
+         PRINT '(I8,A)', bad_lvl_D, ' T/S levels omitted due to bad WOD depth qc flag'
+    IF(bad_lvl_T > 0)  &
+         PRINT '(I8,A)', bad_lvl_T, ' T levels omitted due to bad WOD qc flag'
+    IF(bad_lvl_S > 0)  &
+         PRINT '(I8,A)', bad_lvl_S, ' S levels omitted due to bad WOD qc flag'
 
   END SUBROUTINE wod_read
   !=============================================================================
@@ -76,10 +119,10 @@ CONTAINS
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
-  SUBROUTINE read_wod_rec(unit, ob, valid)
+  SUBROUTINE read_wod_rec(unit, ob, valid, more)
     INTEGER, INTENT(in) :: unit
     TYPE(profile), INTENT(out) :: ob
-    LOGICAL, INTENT(out) :: valid
+    LOGICAL, INTENT(out) :: valid, more
 
     INTEGER :: i, j, k, n
 
@@ -88,18 +131,23 @@ CONTAINS
     INTEGER :: fLen, tmp_i, pos
     REAL :: tmp_r
 
+    LOGICAL :: lvl_good
+    
     REAL :: depth, val
 
+    
     INTEGER :: num_lvl
     INTEGER :: prof_len, num_var, num_var_meta
     INTEGER :: num_taxa, num_taxa_entries
 
     INTEGER :: var_code(10)
     CHARACTER*2 :: cc
+
+    
     valid = .TRUE.
+    more = .TRUE.
 
-
-    ! initialize observatino
+    ! initialize observation
     ob%plat = PLAT_UNKNOWN
 
 
@@ -107,6 +155,7 @@ CONTAINS
     READ(unit, '(a80)', iostat=i) ascii
     IF (i /= 0) THEN
        valid = .FALSE.
+       more = .FALSE.
        RETURN
     END IF
 
@@ -168,7 +217,15 @@ CONTAINS
           ALLOCATE(ob%salt(num_lvl))
        END IF
 
-       tmp_i = readInt(1) ! variable qc
+       ! variable qc
+       tmp_i = readInt(1)
+       IF (.NOT. use_bad_qc .AND. tmp_i /= 0) THEN
+          valid = .FALSE.
+          bad_pfl = bad_pfl + 1
+       END IF       
+          
+
+       ! variable meta data
        num_var_meta = readInt() ! number of var meta data entries
        DO j=1, num_var_meta
           tmp_i = readInt() ! var meta type code
@@ -250,24 +307,41 @@ CONTAINS
     ! profile data
     ! --------------------------------------------------------------------------
     do_lvls: DO i=1,num_lvl
+       
        ob%depth(i) = readReal() ! dpth
-       !       IF(depth == WOD_UNDEF_REAL) CYCLE do_lvls
-       pos = pos + 2
-       !       tmp_i = readInt(1) ! depth err
-       !       tmp_i = readInt(1) ! depth err o
+
+       tmp_i = readInt(1) ! depth err
+       lvl_good = .TRUE.
+       IF (valid .AND. .NOT. use_bad_qc_lvl .AND. tmp_i /= 0) THEN
+          lvl_good = .FALSE.
+          bad_lvl_D = bad_lvl_D + 1
+       END IF
+       tmp_i = readInt(1) ! depth err o
 
        do_vars: DO j=1, num_var
           val = readReal() ! val
           IF(val == WOD_UNDEF_REAL) CYCLE do_vars
-          pos = pos + 2
+
+          ! mark this variable at this level bad if
+          ! qc flags are bad
+          tmp_i = readInt(1) ! val qc
+          IF ( .NOT. lvl_good) THEN
+             val = PROF_UNDEF
+          ELSE IF (valid .AND. .NOT. use_bad_qc_lvl .AND. tmp_i /= 0) THEN
+             val = PROF_UNDEF
+             IF (var_code(j) == 1) bad_lvl_T = bad_lvl_T + 1
+             IF (var_code(j) == 2) bad_lvl_S = bad_lvl_S + 1
+          END IF          
+          tmp_i = readInt(1) ! val qc O
+
+          ! save the value
           IF(var_code(j) == 1) THEN
              ob%temp(i) = val
           ELSE IF(var_code(j) == 2) THEN
              ob%salt(i) = val
-          END IF
-          !          tmp_i = readInt(1) ! val qc
-          !          tmp_i = readInt(1) ! val qc O
+          END IF          
        END DO do_vars
+       
     END DO do_lvls
 
 
