@@ -15,6 +15,7 @@ MODULE profile_mod
   INTEGER, PUBLIC, PARAMETER :: PLAT_BATHY   = 1 !< bathythermographs (e.g. XBT)
   INTEGER, PUBLIC, PARAMETER :: PLAT_BUOY    = 2 !< buoys (moored, drifting)
   INTEGER, PUBLIC, PARAMETER :: PLAT_FLOAT   = 3 !< profiling floats (e.g. Argo)
+  INTEGER, PUBLIC, PARAMETER :: PLAT_TESAC   = 4 !< TESAC format data
 
 
   !> used in the profile%salt or profile%temp variables to indicate there is
@@ -37,6 +38,7 @@ MODULE profile_mod
      INTEGER :: date                 !< year, month, day (YYYYMMDD)
      REAL :: hour                    !< time of day (fractional hours)
      INTEGER :: plat                 !< platform type (see the PLAT_ variables)
+     INTEGER :: tag                  !< tag for output data (e.g. in obs_rej, rejected type)
      REAL, ALLOCATABLE :: depth(:)   !< depth of each level (m)
      REAL, ALLOCATABLE :: salt(:)    !< salinity of each level (PSU)
      REAL, ALLOCATABLE :: temp(:)    !< temperature (C)
@@ -75,10 +77,13 @@ CONTAINS
        plat_type = "BUOY"
     CASE (PLAT_FLOAT)
        plat_type = "FLOAT"
+    CASE (PLAT_TESAC)
+       plat_type = "TESAC"
     CASE DEFAULT
        plat_type = "UNKNOWN"
     END SELECT
     PRINT *, "plat: ", TRIM(plat_type)
+    PRINT *, "tag:  ", self%tag
 
     DO i =1, SIZE(self%depth)
        v1 = MERGE(self%temp(i), PROF_UNDEF, SIZE(self%temp)>=i)

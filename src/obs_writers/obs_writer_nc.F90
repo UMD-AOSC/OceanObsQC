@@ -52,7 +52,9 @@ CONTAINS
     REAL,    ALLOCATABLE :: prf_lat(:)
     REAL,    ALLOCATABLE :: prf_lon(:)
     INTEGER, ALLOCATABLE :: prf_type(:)
+    INTEGER, ALLOCATABLE :: prf_date(:)
     REAL,    ALLOCATABLE :: prf_hr(:)
+    INTEGER, ALLOCATABLE :: prf_tag(:)
     INTEGER, ALLOCATABLE :: prf_obsidx(:)
     INTEGER, ALLOCATABLE :: prf_obslen(:)
     REAL,    ALLOCATABLE :: obs_depth(:)
@@ -88,6 +90,8 @@ CONTAINS
     ALLOCATE(prf_lat(prf_count))
     ALLOCATE(prf_lon(prf_count))
     ALLOCATE(prf_type(prf_count))
+    ALLOCATE(prf_date(prf_count))
+    ALLOCATE(prf_tag(prf_count))
     ALLOCATE(prf_hr(prf_count))
     ALLOCATE(prf_obsidx(prf_count))
     ALLOCATE(prf_obslen(prf_count))
@@ -103,6 +107,8 @@ CONTAINS
           p = p + 1
           prf_lat(p) = prf%lat
           prf_lon(p) = prf%lon
+          prf_date(p) = prf%date
+          prf_tag(p) = prf%tag
           prf_hr(p)  = prf%hour
           prf_type(p) = j
           prf_obsidx(p) = obs_offset
@@ -128,19 +134,28 @@ CONTAINS
 
     CALL check(nf90_def_var(ncid, "prf_lat",    nf90_real,  d_prfs, vid))
     CALL check(nf90_put_att(ncid, vid, "description", "latitude"))
-    CALL check(nf90_put_att(ncid, vid, "units", "degrees_east"))
+    CALL check(nf90_put_att(ncid, vid, "units", "degrees_north"))
 
     CALL check(nf90_def_var(ncid, "prf_lon",    nf90_real,  d_prfs, vid))
     CALL check(nf90_put_att(ncid, vid, "description", "longitude"))
-    CALL check(nf90_put_att(ncid, vid, "units", "degrees_north"))
+    CALL check(nf90_put_att(ncid, vid, "units", "degrees_east"))
+
+    CALL check(nf90_def_var(ncid, "prf_date",     nf90_int,  d_prfs, vid))
+    CALL check(nf90_put_att(ncid, vid, "description", "time"))
+    CALL check(nf90_put_att(ncid, vid, "units", "date"))
 
     CALL check(nf90_def_var(ncid, "prf_hr",     nf90_real,  d_prfs, vid))
-    CALL check(nf90_put_att(ncid, vid, "description", "time"))
+    CALL check(nf90_put_att(ncid, vid, "description", "hours"))
     CALL check(nf90_put_att(ncid, vid, "units", "hours"))
+
+    CALL check(nf90_def_var(ncid, "prf_tag",     nf90_int,  d_prfs, vid))
+    CALL check(nf90_put_att(ncid, vid, "description", &
+         "tag for output data, in rejected data, tag means reject-check-type"))
 
     CALL check(nf90_def_var(ncid, "prf_obsidx", nf90_int,   d_prfs, vid))
     CALL check(nf90_put_att(ncid, vid, "description", &
          "starting index (1 based array) in obs_* arrays of observations for this profile"))
+
     CALL check(nf90_def_var(ncid, "prf_obslen", nf90_int,   d_prfs, vid))
     CALL check(nf90_put_att(ncid, vid, "description", &
          "number of entries in obs_* arrays for this profile"))
@@ -174,8 +189,14 @@ CONTAINS
     CALL check(nf90_inq_varid(ncid, "prf_lon", vid))
     CALL check(nf90_put_var(ncid, vid, prf_lon))
 
+    CALL check(nf90_inq_varid(ncid, "prf_date", vid))
+    CALL check(nf90_put_var(ncid, vid, prf_date))
+
     CALL check(nf90_inq_varid(ncid, "prf_hr", vid))
     CALL check(nf90_put_var(ncid, vid, prf_hr))
+
+    CALL check(nf90_inq_varid(ncid, "prf_tag", vid))
+    CALL check(nf90_put_var(ncid, vid, prf_tag))
 
     CALL check(nf90_inq_varid(ncid, "prf_lon", vid))
     CALL check(nf90_put_var(ncid, vid, prf_lon))

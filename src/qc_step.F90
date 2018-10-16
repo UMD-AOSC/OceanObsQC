@@ -26,10 +26,11 @@ MODULE qc_step_mod
        INTEGER, INTENT(in) :: nmlfile
      END SUBROUTINE I_qc_step_init
 
-     SUBROUTINE I_qc_step_check(obs_in, obs_out)
+     SUBROUTINE I_qc_step_check(obs_in, obs_out, obs_rej)
        IMPORT vec_profile
        TYPE(vec_profile), INTENT(in)    :: obs_in
        TYPE(vec_profile), INTENT(inout) :: obs_out
+       TYPE(vec_profile), INTENT(inout) :: obs_rej
      END SUBROUTINE I_qc_step_check
 
   END INTERFACE

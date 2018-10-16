@@ -5,6 +5,7 @@ set(obsqc_srcs
   obs_writer.F90
   profile.F90
   qc_step.F90
+  cubic_spline.f90
 )
 add_executable( obsqc ${obsqc_srcs})
 

@@ -66,18 +66,22 @@ CONTAINS
     DO
        CALL readmg(file, c1, idate, iret)
        IF (iret /= 0) EXIT
-
        DO
           CALL readsb(file, iret)
           IF (iret /= 0) EXIT
 
           ! read in the profiles, in a way depending on the profile type
           valid = .FALSE.
-          IF (c1 == "NC031001") THEN
+          IF (c1 == "NC031001" .OR. &
+              c1 == "NC031004" ) THEN
              CALL process_bathytesac(file, ob, valid)
              ob%plat = PLAT_BATHY
           ELSE IF (&
                c1 == "NC031002" .OR. &
+               c1 == "NC031006" ) THEN
+             CALL process_bathytesac(file, ob, valid)
+             ob%plat = PLAT_TESAC
+          ELSE IF (&
                c1 == "NC001002" .OR. &
                c1 == "DBUOY" ) THEN
              CALL process_bathytesac(file, ob, valid)

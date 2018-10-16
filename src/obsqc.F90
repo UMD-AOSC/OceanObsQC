@@ -31,10 +31,12 @@ PROGRAM obsqc
 
   CHARACTER(len=1024) :: in_filename
   CHARACTER(len=1024) :: out_filename
+  CHARACTER(len=1024) :: rej_filename
 
   INTEGER :: i, nmlfile
   REAL :: timer_start, timer_end
-  TYPE(vec_profile) :: obs, obs2
+  TYPE(vec_profile) :: obs, obs_good, obs_rej
+!  TYPE(profile) :: ob
 
   TYPE(obs_reader_ptr) :: obs_reader_wrapper
   TYPE(obs_writer_ptr) :: obs_writer_wrapper
@@ -68,6 +70,7 @@ PROGRAM obsqc
   CALL get_command_ARGUMENT(1, VALUE=in_filename)
   CALL get_command_ARGUMENT(2, VALUE=out_filename)
 
+  rej_filename=trim('rej_') // trim(out_filename)
 
   ! open the namelist file
   ! grab the main parameters we need
@@ -146,9 +149,10 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Running QC step plugins"
   PRINT *, "---------------------------------------------"
+  obs_rej  = vec_profile()
   DO i=1, qc_steps%SIZE()
      CALL cpu_TIME(timer_start)
-     obs2 = vec_profile()
+     obs_good = vec_profile()
      qc_step_wrapper = qc_steps%get(i)
 
      PRINT *, ""
@@ -161,10 +165,10 @@ PROGRAM obsqc
      CALL qc_step_wrapper%p%init(nmlfile)
 
      ! perform the QC step
-     CALL qc_step_wrapper%p%check(obs, obs2)
+     CALL qc_step_wrapper%p%check(obs, obs_good, obs_rej)
 
      ! get ready for next cycle
-     obs = obs2
+     obs = obs_good
      CALL cpu_TIME(timer_end)
      PRINT *, ""
      PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
@@ -178,9 +182,20 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Writing profiles"
   PRINT *, "---------------------------------------------"
+
+  PRINT *, "Good profiles:"
   CALL cpu_TIME(timer_start)
   CALL prof_stats(obs)
   CALL selected_obs_writer%obs_write(out_filename, obs)
+  CALL cpu_TIME(timer_end)
+  PRINT *, ""
+  PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
+  PRINT *, ""
+
+  PRINT *, "Rejected profiles:"
+  CALL cpu_TIME(timer_start)
+  CALL prof_stats(obs_rej)
+  CALL selected_obs_writer%obs_write(rej_filename, obs_rej)
   CALL cpu_TIME(timer_end)
   PRINT *, ""
   PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
@@ -200,13 +215,12 @@ CONTAINS
     INTEGER :: prf_t_cnt, prf_s_cnt, obs_t_cnt, obs_s_cnt
     TYPE(profile), POINTER :: prf
 
-
     prf_t_cnt = 0
     prf_s_cnt = 0
     obs_t_cnt = 0
     obs_s_cnt = 0
 
-    DO i=1,obs%SIZE()
+    DO i=1,profs%SIZE()
        prf => obs%of(i)
        IF ( SIZE(prf%temp) > 0) THEN
           prf_t_cnt = prf_t_cnt + 1
