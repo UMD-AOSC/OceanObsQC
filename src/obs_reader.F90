@@ -67,91 +67,60 @@ CONTAINS
 
     TYPE(vec_profile) :: obs_in
     TYPE(profile), POINTER :: ob
-    INTEGER :: i, j, k
-    LOGICAL :: vSalt, vTemp
-    REAL, ALLOCATABLE :: tmp_r(:)
-
+    INTEGER :: i, j
+    INTEGER :: rm_count(6)
 
     ! read in profiles from the file
     CALL self%obs_read(filename, obs_in)
 
     ! do some quick checks to make sure the initial data looks okay.
-    ! mainly this will just removed undefined values
+    ! mainly this will just remove undefined values
     !--------------------------------------------------------------------------
     ! for each profile
+    rm_count = 0
     DO i=1,obs_in%SIZE()
        ob => obs_in%of(i)
 
        ! dont use if not within desired date range
-       IF(ob%date < start_date .OR. ob%date > end_date) CYCLE
-
-       ! if no valid temperature, remove entire array
-       IF(MAXVAL(ob%temp) == MINVAL(ob%temp) .AND. ob%temp(1) == PROF_UNDEF) THEN
-          DEALLOCATE(ob%temp)
-          ALLOCATE(ob%temp(0))  
-  END  IF
-
-
-       ! if no valid salt, remove entire array
-       IF(MAXVAL(ob%salt) == MINVAL(ob%salt) .AND. ob%salt(1) == PROF_UNDEF) THEN
-          DEALLOCATE(ob%salt)
-          ALLOCATE(ob%salt(0))
-       END  IF
-
-
-       ! remove levels that have undefined depth, or no values
-       j=0
-       DO k=1,SIZE(ob%depth)
-          ! is the salinity valid at this leve?
-          vSalt = SIZE(ob%salt) >= k
-          IF (vSalt) vSalt =  ob%salt(k) < PROF_UNDEF
-
-          ! is the temperature valid at this level?
-          vTemp = SIZE(ob%temp) >= k
-          IF (vTemp) vTemp =  ob%temp(k) < PROF_UNDEF
-
-          ! if valid temp or salinity..AND valid depth
-          IF ( (vSalt .OR. vTemp) .AND. ob%depth(k) < PROF_UNDEF) THEN
-             j = j + 1
-             ob%depth(j) =ob%depth(k)
-             IF (SIZE(ob%salt) >= k) ob%salt(j) =ob%salt(k)
-             IF (SIZE(ob%temp) >= k) ob%temp(j) =ob%temp(k)
-          END IF
-       END DO
-
-       IF (j /= SIZE(ob%depth)) THEN
-          ! levels were removed... adjust array length
-          ALLOCATE(tmp_r(j))
-
-          tmp_r = ob%depth(1:j)
-          DEALLOCATE(ob%depth)
-          ALLOCATE(ob%depth(j))
-          ob%depth = tmp_r
-
-          IF(SIZE(ob%temp) > 0) THEN
-             tmp_r = ob%temp(1:j)
-             DEALLOCATE(ob%temp)
-             ALLOCATE(ob%temp(j))
-             ob%temp = tmp_r
-          END IF
-
-          IF(SIZE(ob%salt) > 0) THEN
-             tmp_r = ob%salt(1:j)
-             DEALLOCATE(ob%salt)
-             ALLOCATE(ob%salt(j))
-             ob%salt = tmp_r
-          END IF
-
-          DEALLOCATE(tmp_r)
+       IF(ob%date < start_date .OR. ob%date > end_date) THEN
+          rm_count(1) = rm_count(1) + 1
+          CYCLE
        END IF
 
-       ! if no salt AND no temp, don't use this profile
-       IF(SIZE(ob%salt) == 0 .AND. SIZE(ob%temp) == 0) CYCLE
+       ! check the levels, remove empty levels or variables
+       CALL ob%check(j)
+
+       SELECT CASE(j)
+       CASE (PROF_CHECK_NO_VARS)
+          ! don't add this profile to the valid obs
+          rm_count(2) = rm_count(2) + 1
+          CYCLE
+       CASE (PROF_CHECK_NO_T)
+          rm_count(3) = rm_count(3) + 1
+       CASE (PROF_CHECK_NO_S)
+          rm_count(4) = rm_count(4) + 1
+       CASE (PROF_CHECK_RMLVL)
+          rm_count(5) = rm_count(5) + 1
+       END SELECT
 
        ! done, use this ob
        CALL obs%push_back(ob)
 
     END DO
+
+
+    ! print out warnings if profiles were removed
+    IF(rm_count(1) > 0) &
+         PRINT '(A,I8,A)', "", rm_count(1), " profiles removed due to outside date range"
+    IF(rm_count(2) > 0) &
+         PRINT '(A,I8,A)', "", rm_count(2), " profiles removed due to no valid variables"
+    IF(rm_count(3) > 0) &
+         PRINT '(A,I8,A)', "", rm_count(3), " T profiles removed due to constant PROF_UNDEF"
+    IF(rm_count(4) > 0) &
+         PRINT '(A,I8,A)', "", rm_count(4), " S profiles removed due to constant PROF_UNDEF"
+    IF(rm_count(5) > 0) &
+         PRINT '(A,I8,A)', "", rm_count(5), " profiles had empty levels removed "
+
 
   END SUBROUTINE obs_reader_get
   !=============================================================================

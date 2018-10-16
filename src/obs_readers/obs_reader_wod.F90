@@ -106,13 +106,13 @@ CONTAINS
 
     PRINT *, ""
     IF(bad_pfl > 0)  &
-         PRINT '(A,I8,A)', "WOD reader: ", bad_pfl, ' profiles omitted due to bad WOD qc flag'
+         PRINT '(A,I8,A)', "", bad_pfl, ' profiles omitted due to bad WOD qc flag'
     IF(bad_lvl_D > 0)  &
-         PRINT '(A,I8,A)', "WOD reader: ", bad_lvl_D, ' T/S levels omitted due to bad WOD depth qc flag'
+         PRINT '(A,I8,A)', "", bad_lvl_D, ' T/S levels omitted due to bad WOD depth qc flag'
     IF(bad_lvl_T > 0)  &
-         PRINT '(A,I8,A)', "WOD reader: ", bad_lvl_T, ' T levels omitted due to bad WOD qc flag'
+         PRINT '(A,I8,A)', "", bad_lvl_T, ' T levels omitted due to bad WOD qc flag'
     IF(bad_lvl_S > 0)  &
-         PRINT '(A,I8,A)', "WOD reader: ", bad_lvl_S, ' S levels omitted due to bad WOD qc flag'
+         PRINT '(A,I8,A)', "", bad_lvl_S, ' S levels omitted due to bad WOD qc flag'
 
   END SUBROUTINE wod_read
   !=============================================================================
