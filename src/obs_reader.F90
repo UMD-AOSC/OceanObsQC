@@ -88,8 +88,8 @@ CONTAINS
        ! if no valid temperature, remove entire array
        IF(MAXVAL(ob%temp) == MINVAL(ob%temp) .AND. ob%temp(1) == PROF_UNDEF) THEN
           DEALLOCATE(ob%temp)
-          ALLOCATE(ob%temp(0))
-       END  IF
+          ALLOCATE(ob%temp(0))  
+  END  IF
 
 
        ! if no valid salt, remove entire array

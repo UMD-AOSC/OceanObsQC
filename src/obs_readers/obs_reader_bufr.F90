@@ -43,10 +43,10 @@ CONTAINS
     INTEGER, INTENT(in) :: nmlfile
 
     ! TODO, process namelist options
-  END SUBROUTINE bufr_init  
+  END SUBROUTINE bufr_init
   !=============================================================================
 
-  
+
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
@@ -84,7 +84,7 @@ CONTAINS
           ! read in the profiles, in a way depending on the profile type
           valid = .FALSE.
           IF (c1 == "NC031001" .OR. &
-              c1 == "NC031004" ) THEN
+               c1 == "NC031004" ) THEN
              CALL process_bathytesac(file, ob, valid)
              ob%plat = PLAT_BATHY
           ELSE IF (&

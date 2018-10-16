@@ -9,7 +9,7 @@ MODULE obs_reader_wod_mod
   IMPLICIT NONE
   PRIVATE
 
-  
+
   !=============================================================================
   !>
   !-----------------------------------------------------------------------------
@@ -25,19 +25,19 @@ MODULE obs_reader_wod_mod
   REAL,    PARAMETER :: WOD_UNDEF_REAL = -9.99e36
   INTEGER, PARAMETER :: WOD_UNDEF_INT = -999.9
 
-  
+
   INTEGER :: bad_lvl_D ! number of levels discarded due to qc flag for depth
   INTEGER :: bad_lvl_T ! number of temperature levels discarded due to qc flag for temperature
   INTEGER :: bad_lvl_S ! number of salinity levels discarded due to qc flag for salinity
   INTEGER :: bad_pfl   ! number of complete profiles discarded due to bad qc flag for whole profile
 
-  
+
   ! parameters read in from the namelist
   LOGICAL :: use_bad_qc_pfl = .FALSE. !< if TRUE, profiles with bad WOD qc flags will be kept
   LOGICAL :: use_bad_qc_lvl = .FALSE. !< if TRUE, individual levels with bad WOD qc flags will be kept
 
 
-  
+
 CONTAINS
 
 
@@ -60,15 +60,15 @@ CONTAINS
     INTEGER, INTENT(in) :: nmlfile
 
     NAMELIST /obs_reader_wod/ use_bad_qc_pfl, use_bad_qc_lvl
-    
+
     READ(nmlfile, obs_reader_wod)
     PRINT obs_reader_wod
-    
-  END SUBROUTINE wod_init      
+
+  END SUBROUTINE wod_init
   !=============================================================================
 
-  
-  
+
+
   !=============================================================================
   !> Read in a given WOD profile file, returning a vector of valid profiles
   !-----------------------------------------------------------------------------
@@ -135,10 +135,10 @@ CONTAINS
     REAL :: tmp_r
 
     LOGICAL :: lvl_good
-    
+
     REAL :: depth, val
 
-    
+
     INTEGER :: num_lvl
     INTEGER :: prof_len, num_var, num_var_meta
     INTEGER :: num_taxa, num_taxa_entries
@@ -146,7 +146,7 @@ CONTAINS
     INTEGER :: var_code(10)
     CHARACTER*2 :: cc
 
-    
+
     valid = .TRUE.
     more = .TRUE.
 
@@ -225,8 +225,8 @@ CONTAINS
        IF (.NOT. use_bad_qc_pfl .AND. tmp_i /= 0) THEN
           valid = .FALSE.
           bad_pfl = bad_pfl + 1
-       END IF       
-          
+       END IF
+
 
        ! variable meta data
        num_var_meta = readInt() ! number of var meta data entries
@@ -310,7 +310,7 @@ CONTAINS
     ! profile data
     ! --------------------------------------------------------------------------
     do_lvls: DO i=1,num_lvl
-       
+
        ob%depth(i) = readReal() ! dpth
 
        tmp_i = readInt(1) ! depth err
@@ -334,7 +334,7 @@ CONTAINS
              val = PROF_UNDEF
              IF (var_code(j) == 1) bad_lvl_T = bad_lvl_T + 1
              IF (var_code(j) == 2) bad_lvl_S = bad_lvl_S + 1
-          END IF          
+          END IF
           tmp_i = readInt(1) ! val qc O
 
           ! save the value
@@ -342,9 +342,9 @@ CONTAINS
              ob%temp(i) = val
           ELSE IF(var_code(j) == 2) THEN
              ob%salt(i) = val
-          END IF          
+          END IF
        END DO do_vars
-       
+
     END DO do_lvls
 
 

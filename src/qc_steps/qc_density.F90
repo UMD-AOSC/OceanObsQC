@@ -148,10 +148,10 @@ CONTAINS
 
        ! only keep if density inversion not found
        IF(keep) THEN
-         CALL obs_out%push_back(prof)
+          CALL obs_out%push_back(prof)
        ELSE
-         prof%tag = -1 !TODO, give valid tag
-         CALL obs_rej%push_back(prof)
+          prof%tag = -1 !TODO, give valid tag
+          CALL obs_rej%push_back(prof)
        END IF
 
 

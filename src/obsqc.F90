@@ -36,7 +36,7 @@ PROGRAM obsqc
   INTEGER :: i, nmlfile
   REAL :: timer_start, timer_end
   TYPE(vec_profile) :: obs, obs_good, obs_rej
-!  TYPE(profile) :: ob
+  !  TYPE(profile) :: ob
 
   TYPE(obs_reader_ptr) :: obs_reader_wrapper
   TYPE(obs_writer_ptr) :: obs_writer_wrapper
@@ -70,7 +70,7 @@ PROGRAM obsqc
   CALL get_command_ARGUMENT(1, VALUE=in_filename)
   CALL get_command_ARGUMENT(2, VALUE=out_filename)
 
-  rej_filename=trim('rej_') // trim(out_filename)
+  rej_filename=TRIM('rej_') // TRIM(out_filename)
 
   ! open the namelist file
   ! grab the main parameters we need
@@ -105,7 +105,7 @@ PROGRAM obsqc
   REWIND(nmlfile)
   CALL selected_obs_reader%init(nmlfile)
 
-  
+
   ! Print a list of all obs writer plugins registered,
   ! and determine which plugin to use
   PRINT *, ""
@@ -122,9 +122,9 @@ PROGRAM obsqc
      PRINT *, 'ERROR: observation writer type "', obs_writer_type, &
           '" not found. Check the namelist.'
      STOP 1
-  END IF  
+  END IF
   PRINT *, "Using: ", selected_obs_writer%name()
-  
+
 
   ! register all the qc_step plugins
   PRINT *, ""
