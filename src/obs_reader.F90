@@ -18,7 +18,7 @@ MODULE obs_reader_mod
      ! procedures that must be defined by the subclass
      PROCEDURE(I_reader_getstr), NOPASS, DEFERRED :: name
      PROCEDURE(I_reader_init),   NOPASS, DEFERRED :: init
-     PROCEDURE(I_reader_read),   NOPASS, PRIVATE, DEFERRED :: obs_read
+     PROCEDURE(I_reader_read),   NOPASS, DEFERRED :: obs_read
   END TYPE obs_reader
 
   ABSTRACT INTERFACE
