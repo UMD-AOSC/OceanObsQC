@@ -270,7 +270,7 @@ CONTAINS
     obs_s_cnt = 0
 
     DO i=1,profs%SIZE()
-       prf => obs%of(i)
+       prf => profs%of(i)
        IF ( SIZE(prf%temp) > 0) THEN
           prf_t_cnt = prf_t_cnt + 1
           obs_t_cnt = obs_t_cnt + SIZE(prf%temp)
