@@ -330,7 +330,7 @@ CONTAINS
              !==> gross check,
              vtemp : DO k = 1, SIZE(prof%temp)
                 ! ignore this level if there is no defined temperature
-                IF (prof%salt(k) == PROF_UNDEF) CYCLE
+                IF (prof%temp(k) == PROF_UNDEF) CYCLE
 
                 cdif = ABS(prof%temp(k)-cobs_tinp(k))
                 coff = MAX(cobs_gros_MIN_T, &
