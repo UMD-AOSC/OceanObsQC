@@ -5,6 +5,7 @@
 &obsqc_nml
   obs_reader_type="BUFR"  ! options are: BUFR, WOD
   obs_writer_type="NC"    ! options are: NC
+  qcsteps="qc_duplicate qc_depths qc_global qc_density"
 
   ! only keep profiles between these dates (YYYYMMDD)
   ! if commented out, all dates are kept

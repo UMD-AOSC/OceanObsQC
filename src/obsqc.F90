@@ -38,6 +38,7 @@ PROGRAM obsqc
   TYPE(vec_profile) :: obs, obs_good, obs_rej
   TYPE(profile), POINTER :: prof
   INTEGER :: rm_count(6)
+  INTEGER :: qcsteps_idx
 
   TYPE(obs_reader_ptr) :: obs_reader_wrapper
   TYPE(obs_writer_ptr) :: obs_writer_wrapper
@@ -49,11 +50,12 @@ PROGRAM obsqc
   ! variables that are read in from the namelist
   CHARACTER(:), ALLOCATABLE :: obs_reader_type
   CHARACTER(:), ALLOCATABLE :: obs_writer_type
+  CHARACTER(:), ALLOCATABLE :: qcsteps
   INTEGER :: read_start_date = 0
   INTEGER :: read_end_date   = 99999999
 
   NAMELIST /obsqc_nml/ obs_reader_type, obs_writer_type, &
-       read_start_date, read_end_date
+       read_start_date, read_end_date, qcsteps
 
   PRINT *, ""
   PRINT *, "==================================================================="
@@ -76,11 +78,13 @@ PROGRAM obsqc
   ! open the namelist file
   ! grab the main parameters we need
   OPEN(newunit=nmlfile, file='obsqc.nml')
-  ALLOCATE(CHARACTER(len=1024) :: obs_reader_type)
-  ALLOCATE(CHARACTER(len=1024) :: obs_writer_type)
+  obs_reader_type = REPEAT(' ', 1024)
+  obs_writer_type = REPEAT(' ', 1024)
+  qcsteps = REPEAT(' ', 1024)
   READ(nmlfile, obsqc_nml)
   obs_reader_type = TRIM(obs_reader_type)
   obs_writer_type = TRIM(obs_writer_type)
+  qcsteps = TRIM(qcsteps)
   PRINT obsqc_nml
 
 
@@ -131,7 +135,10 @@ PROGRAM obsqc
   PRINT *, ""
   CALL register_qc_step_plugins()
   PRINT  '(A,I0)',' QC plugins registered: ', qc_steps%SIZE()
-
+  DO i=1, qc_steps%SIZE()
+    qc_step_wrapper = qc_steps%get(i)
+    print *, "* ", qc_step_wrapper%p%name()
+  END DO
 
   ! read in the observations
   PRINT *, ""
@@ -155,73 +162,89 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Running QC step plugins"
   PRINT *, "---------------------------------------------"
-  obs_rej  = vec_profile()
-  DO i=1, qc_steps%SIZE()
-     CALL cpu_TIME(timer_start)
+  obs_rej = vec_profile()
 
-     obs_good = vec_profile()
-     qc_step_wrapper = qc_steps%get(i)
+  DO WHILE( LEN(qcsteps) > 0)
+    ! loop over all the qc step names specified in the namelist string
+    qcsteps_idx = SCAN(qcsteps, ';, ')
+    IF(qcsteps_idx == 0) qcsteps_idx = LEN(qcsteps)+1
 
-     PRINT *, ""
-     PRINT *, ""
-     PRINT '(I3,5A)', i, ') ', qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
-     PRINT *, "---------------------------------------------"
+    DO i=1, qc_steps%SIZE()
+      qc_step_wrapper = qc_steps%get(i)
 
-     ! initialize the module
-     REWIND(nmlfile)
-     CALL qc_step_wrapper%p%init(nmlfile)
+      ! if this matches the current qc step we are trying to match, continue
+      IF (trim(qcsteps(:qcsteps_idx-1)) /= qc_step_wrapper%p%name()) CYCLE
 
-     ! perform the QC step
-     CALL qc_step_wrapper%p%check(obs, obs_good, obs_rej)
+      CALL cpu_TIME(timer_start)
+      obs_good = vec_profile()
 
-     ! check that the variables of each profile are good
-     obs = vec_profile()
-     rm_count = 0
-     each_profile: DO j = 1, obs_good%SIZE()
+      PRINT *, ""
+      PRINT *, ""
+      PRINT '(I3,5A)', i, ') ', qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
+      PRINT *, "---------------------------------------------"
+
+      ! initialize the module
+      REWIND(nmlfile)
+      CALL qc_step_wrapper%p%init(nmlfile)
+
+      ! perform the QC step
+      CALL qc_step_wrapper%p%check(obs, obs_good, obs_rej)
+
+      ! check that the variables of each profile are good
+      obs = vec_profile()
+      rm_count = 0
+      each_profile: DO j = 1, obs_good%SIZE()
         prof => obs_good%of(j)
 
-        ! remove bad variables /levels
-        CALL prof%check(err)
+          ! remove bad variables /levels
+          CALL prof%check(err)
 
-        SELECT CASE(err)
-        CASE (PROF_CHECK_NO_VARS)
-           ! don't add this profile to the valid obs
-           rm_count(1) = rm_count(1) + 1
-           CALL obs_rej%push_back(prof)
-           CYCLE each_profile
-        CASE (PROF_CHECK_NO_T)
-           rm_count(2) = rm_count(2) + 1
-        CASE (PROF_CHECK_NO_S)
-           rm_count(3) = rm_count(3) + 1
-!        CASE (PROF_CHECK_RMLVL)
-!           rm_count(4) = rm_count(4) + 1
-        END SELECT
+          SELECT CASE(err)
+          CASE (PROF_CHECK_NO_VARS)
+             ! don't add this profile to the valid obs
+             rm_count(1) = rm_count(1) + 1
+             CALL obs_rej%push_back(prof)
+             CYCLE each_profile
+          CASE (PROF_CHECK_NO_T)
+             rm_count(2) = rm_count(2) + 1
+          CASE (PROF_CHECK_NO_S)
+             rm_count(3) = rm_count(3) + 1
+  !        CASE (PROF_CHECK_RMLVL)
+  !           rm_count(4) = rm_count(4) + 1
+          END SELECT
 
-        CALL obs%push_back(prof)
-     END DO each_profile
+          CALL obs%push_back(prof)
+       END DO each_profile
 
-     ! were any profiles modified?
-     IF (SUM(rm_count) > 0 ) THEN
-        PRINT *, ""
-        PRINT '(A)', "WARNING: The following errors occurred because invalid profiles were"
-        PRINT '(A)', "         returned from the qc step. These errors should not happen."
-        PRINT '(A)', "         Check the validity of the code for this QC step."
-     END IF
-     IF (rm_count(1) > 0) &
-          PRINT '(A,I8,A)', "WARNING: ", rm_count(1), " profiles removed due to no valid T or S values."
-     IF (rm_count(2) > 0) &
-          PRINT '(A,I8,A)', "WARNING: ", rm_count(2), " T profiles removed due to constant PROF_UNDEF profile."
-     IF (rm_count(3) > 0) &
-          PRINT '(A,I8,A)', "WARNING: ", rm_count(3), " S profiles removed due to constant PROF_UNDEF profile."
-!     IF (rm_count(4) > 0) &
-!          PRINT '(A,I8,A)', "WARNING: ", rm_count(4), " individual levels removed due to PROF_UNDEF values."
+       ! were any profiles modified?
+       IF (SUM(rm_count) > 0 ) THEN
+          PRINT *, ""
+          PRINT '(A)', "WARNING: The following errors occurred because invalid profiles were"
+          PRINT '(A)', "         returned from the qc step. These errors should not happen."
+          PRINT '(A)', "         Check the validity of the code for this QC step."
+       END IF
+       IF (rm_count(1) > 0) &
+            PRINT '(A,I8,A)', "WARNING: ", rm_count(1), " profiles removed due to no valid T or S values."
+       IF (rm_count(2) > 0) &
+            PRINT '(A,I8,A)', "WARNING: ", rm_count(2), " T profiles removed due to constant PROF_UNDEF profile."
+       IF (rm_count(3) > 0) &
+            PRINT '(A,I8,A)', "WARNING: ", rm_count(3), " S profiles removed due to constant PROF_UNDEF profile."
+  !     IF (rm_count(4) > 0) &
+  !          PRINT '(A,I8,A)', "WARNING: ", rm_count(4), " individual levels removed due to PROF_UNDEF values."
 
-     ! get ready for next cycle
+       ! get ready for next cycle
+       CALL cpu_TIME(timer_end)
+       PRINT *, ""
+       PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
+       PRINT *, ""
+       EXIT
+    END DO
 
-     CALL cpu_TIME(timer_end)
-     PRINT *, ""
-     PRINT '(5X,A,F5.1,A)', "elapsed time: ", timer_end-timer_start,'s'
-     PRINT *, ""
+    IF(i > qc_steps%SIZE()) THEN
+      PRINT *, "ERROR: qc step specified in namelist was not found: '", trim(qcsteps(:qcsteps_idx-1)),"'"
+      STOP 1
+    END IF
+    qcsteps = qcsteps(qcsteps_idx+1:)
   END DO
 
 
