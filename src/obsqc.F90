@@ -88,6 +88,12 @@ PROGRAM obsqc
   PRINT obsqc_nml
 
 
+  PRINT *, ""
+  PRINT *, ""
+  PRINT *, "---------------------------------------------"
+  PRINT *, "Reading profiles"
+  PRINT *, "---------------------------------------------"
+
   ! print a list of all the obs reader plugins registered,
   ! and determine which plugin to use
   PRINT *, ""
@@ -107,46 +113,11 @@ PROGRAM obsqc
   END IF
   PRINT *, "Using: ", selected_obs_reader%name()
   PRINT *, ""
-  REWIND(nmlfile)
-  CALL selected_obs_reader%init(nmlfile)
-
-
-  ! Print a list of all obs writer plugins registered,
-  ! and determine which plugin to use
-  PRINT *, ""
-  PRINT *, "Available observation writer plugins:"
-  CALL register_obs_writer_plugins()
-  selected_obs_writer=>NULL()
-  DO i = 1, obs_writers%SIZE()
-     obs_writer_wrapper = obs_writers%get(i)
-     PRINT *, "* ", obs_writer_wrapper%p%name()
-     IF (obs_writer_wrapper%p%name() == obs_writer_type)&
-          selected_obs_writer => obs_writer_wrapper%p
-  END DO
-  IF (.NOT. ASSOCIATED(selected_obs_writer)) THEN
-     PRINT *, 'ERROR: observation writer type "', obs_writer_type, &
-          '" not found. Check the namelist.'
-     STOP 1
-  END IF
-  PRINT *, "Using: ", selected_obs_writer%name()
-
-
-  ! register all the qc_step plugins
-  PRINT *, ""
-  CALL register_qc_step_plugins()
-  PRINT  '(A,I0)',' QC plugins registered: ', qc_steps%SIZE()
-  DO i=1, qc_steps%SIZE()
-    qc_step_wrapper = qc_steps%get(i)
-    print *, "* ", qc_step_wrapper%p%name()
-  END DO
 
   ! read in the observations
-  PRINT *, ""
-  PRINT *, ""
-  PRINT *, "---------------------------------------------"
-  PRINT *, "Reading profiles"
-  PRINT *, "---------------------------------------------"
   CALL cpu_TIME(timer_start)
+  REWIND(nmlfile)
+  CALL selected_obs_reader%init(nmlfile)
   CALL selected_obs_reader%get(TRIM(in_filename), &
        read_start_date, read_end_date, obs)
   PRINT *,""
@@ -162,6 +133,16 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Running QC step plugins"
   PRINT *, "---------------------------------------------"
+
+  ! register all the qc_step plugins
+  PRINT *, ""
+  CALL register_qc_step_plugins()
+  PRINT  '(A,I0)',' QC plugins registered: ', qc_steps%SIZE()
+  DO i=1, qc_steps%SIZE()
+    qc_step_wrapper = qc_steps%get(i)
+    print *, "* ", qc_step_wrapper%p%name()
+  END DO
+
   obs_rej = vec_profile()
 
   DO WHILE( LEN(qcsteps) > 0)
@@ -254,6 +235,26 @@ PROGRAM obsqc
   PRINT *, "---------------------------------------------"
   PRINT *, "Writing profiles"
   PRINT *, "---------------------------------------------"
+
+  ! Print a list of all obs writer plugins registered,
+  ! and determine which plugin to use
+  PRINT *, ""
+  PRINT *, "Available observation writer plugins:"
+  CALL register_obs_writer_plugins()
+  selected_obs_writer=>NULL()
+  DO i = 1, obs_writers%SIZE()
+     obs_writer_wrapper = obs_writers%get(i)
+     PRINT *, "* ", obs_writer_wrapper%p%name()
+     IF (obs_writer_wrapper%p%name() == obs_writer_type)&
+          selected_obs_writer => obs_writer_wrapper%p
+  END DO
+  IF (.NOT. ASSOCIATED(selected_obs_writer)) THEN
+     PRINT *, 'ERROR: observation writer type "', obs_writer_type, &
+          '" not found. Check the namelist.'
+     STOP 1
+  END IF
+  PRINT *, "Using: ", selected_obs_writer%name()
+  PRINT *, ""
 
   PRINT *, "Good profiles written:"
   CALL cpu_TIME(timer_start)
