@@ -3,9 +3,10 @@
 !===============================================================================
 
 &obsqc_nml
-  obs_reader_type="BUFR"  ! options are: BUFR, WOD
+  obs_reader_type="WOD"  ! options are: BUFR, WOD
   obs_writer_type="NC"    ! options are: NC
-  qcsteps="qc_duplicate qc_depths qc_global qc_density"
+  !qcsteps="qc_bounds qc_duplicate qc_depths qc_global qc_density"
+  qcsteps="qc_duplicate qc_depths qc_bounds qc_clim qc_density"
 
   ! only keep profiles between these dates (YYYYMMDD)
   ! if commented out, all dates are kept
@@ -24,6 +25,9 @@
  use_bad_qc_lvl=F
 /
 
+
+&obs_reader_bufr
+/
 
 
 !===============================================================================
@@ -45,26 +49,26 @@
   max_gap=500.0     ! no vertical gaps larger than this allowed (meters)
 /
 
-&qc_global
- ! Check for gross off-set from global climate
 
- do_qc_global=T     ! Check for max off-set from global climate
- cobs_cord="SPHERICAL"
- cobs_dx = 1.0
- cobs_dy = 1.0
- cobs_x0 = 0.5
- cobs_fmax = 2
+&qc_bounds
+  remove_zero_latlon = T
+  t_max = 33.0
+  t_min = -2.0
+  s_max = 43.0
+  s_min = 0.1
+/
+
+
+&qc_clim
+
+ clim_searchdist = 150.0e3
  cobs_gros_sdv_T = 5.0
  cobs_gros_min_T = 3.0
  cobs_gros_max_T = 20.0
  cobs_gros_sdv_S = 5.0
  cobs_gros_min_S = 2.0
- cobs_gros_max_S = 7.0 
- cobs_TS_file="TRANS-WOA09-TS.nc"
- cobs_lon_dim="imp"
- cobs_lat_dim="jmp"
- cobs_dep_dim="kmp"
- cobs_mon_dim="Time"
+ cobs_gros_max_S = 7.0
+ cobs_TS_file="WOA18_TS.nc"
  cobs_lon_var="lon"
  cobs_lat_var="lat"
  cobs_dep_var="depth"
@@ -78,14 +82,13 @@
 &qc_profile
  ! check for vertical structures
 
- do_qc_profile=T
  prf_trlatN=60.0
  prf_trlatS=-60.0
  prf_trTmin=0.05
  prf_trSmin=0.005
  prf_T1spmax=0.5
  prf_S1spmax=0.1
- prf_Tbspmax=0.5 
+ prf_Tbspmax=0.5
  prf_Sbspmax=0.1
  prf_Trsmx=1.75
  prf_Srsmx=1.75
