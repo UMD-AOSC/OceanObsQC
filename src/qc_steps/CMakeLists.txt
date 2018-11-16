@@ -11,6 +11,7 @@ set(PLUGINS
   #qc_vrt_avg
   qc_depths
   qc_global
+  qc_bounds
   qc_profile
   qc_density
   #qc_time_avg
