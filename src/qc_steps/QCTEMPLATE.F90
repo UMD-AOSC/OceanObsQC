@@ -27,8 +27,8 @@ MODULE QCTEMPLATE_mod
    CONTAINS
      PROCEDURE, NOPASS :: name  => qc_step_name
      PROCEDURE, NOPASS :: desc  => qc_step_desc
-     PROCEDURE, NOPASS :: init  => qc_step_init
-     PROCEDURE, NOPASS :: check => qc_step_check
+     PROCEDURE         :: init  => qc_step_init
+     PROCEDURE         :: check => qc_step_check
   END TYPE QCTEMPLATE
   !=============================================================================
 
@@ -65,7 +65,8 @@ CONTAINS
   !! subroutine is called multiple times.
   !! @param nmlfile  the unit number of the already open namelist file
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_init(nmlfile)
+  SUBROUTINE qc_step_init(self, nmlfile)
+    CLASS(QCTEMPLATE) :: self
     INTEGER, INTENT(in) :: nmlfile
 
     !NAMELIST /QCTEMPLATE/ var1, var2
@@ -86,9 +87,11 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out)
+  SUBROUTINE qc_step_check(self, obs_in, obs_out, obs_rej)
+    CLASS(QCTEMPLATE) :: self
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
+    TYPE(vec_profile), INTENT(inout) :: obs_rej
 
     INTEGER :: i
     TYPE(profile), POINTER :: prof

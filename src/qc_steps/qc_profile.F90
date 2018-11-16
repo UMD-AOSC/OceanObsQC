@@ -27,12 +27,12 @@ MODULE qc_profile_mod
    CONTAINS
      PROCEDURE, NOPASS :: name  => qc_step_name
      PROCEDURE, NOPASS :: desc  => qc_step_desc
-     PROCEDURE, NOPASS :: init  => qc_step_init
-     PROCEDURE, NOPASS :: check => qc_step_check
+     PROCEDURE         :: init  => qc_step_init
+     PROCEDURE         :: check => qc_step_check
   END TYPE qc_profile
   !=============================================================================
+
   ! parameters to be from namelist
-  LOGICAL, PUBLIC :: do_qc_profile = .TRUE.                  ! do this QC
   REAL, PUBLIC :: prf_trlatN = 60.0                          ! max latitude for constant profile
   REAL, PUBLIC :: prf_trlatS = -60.0                         ! min latitude for constant profile
   REAL, PUBLIC :: prf_trTmin = 0.05                          ! min Temp diff in profile
@@ -43,6 +43,8 @@ MODULE qc_profile_mod
   REAL, PUBLIC :: prf_Sbspmax = 0.1                          ! max dS/dz at bottom in profile
   REAL, PUBLIC :: prf_Trsmx = 1.75                           ! max rms of dT/dx**2 in profile
   REAL, PUBLIC :: prf_Srsmx = 1.00                           ! max rms of dS/dx**2 in profile
+
+
 
 CONTAINS
 
@@ -76,14 +78,15 @@ CONTAINS
   !! subroutine is called multiple times.
   !! @param nmlfile  the unit number of the already open namelist file
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_init(nmlfile)
+  SUBROUTINE qc_step_init(self, nmlfile)
+    CLASS(qc_profile) :: self
     INTEGER, INTENT(in) :: nmlfile
 
     !NAMELIST /QCTEMPLATE/ var1, var2
     !READ(nmlfile, QCTEMPLATE)
     !PRINT QCTEMPLATE
 
-    NAMELIST /qc_profile/ do_qc_profile, &
+    NAMELIST /qc_profile/  &
          prf_trlatN, prf_trlatS, prf_trTmin, prf_trSmin, &
          prf_T1spmax, prf_Tbspmax, prf_S1spmax, prf_Sbspmax, &
          prf_Trsmx, prf_Srsmx
@@ -107,7 +110,8 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out, obs_rej)
+  SUBROUTINE qc_step_check(self, obs_in, obs_out, obs_rej)
+    CLASS(qc_profile) :: self
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
     TYPE(vec_profile), INTENT(inout) :: obs_rej
@@ -115,27 +119,34 @@ CONTAINS
     INTEGER :: i, k, kb, kn
     REAL :: trTmin, trTmax, trSmin, trSmax, dtdz, dsdz, dvns, dvrs
     TYPE(profile),POINTER :: prof
-    INTEGER :: bad_prf_trconst_T, bad_prf_trconst_S, bad_prf_trconst
+    TYPE(profile) :: prof_rej
+
+    INTEGER :: bad_prf_trconst_T, bad_prf_trconst_S
     INTEGER :: bad_prf_T1sp, bad_prf_Tbsp, bad_prf_S1sp, bad_prf_Sbsp
     INTEGER :: bad_prf_Tvns, bad_prf_Svns
 
-    !---
-    IF (.NOT. do_qc_profile) THEN
-       PRINT *, "Skip qc_profile"
-       obs_out = obs_in
-       RETURN
-    ENDIF
+    INTEGER :: tag_prf_trconst_T, tag_prf_trconst_S
+    INTEGER :: tag_prf_T1sp, tag_prf_Tbsp, tag_prf_S1sp, tag_prf_Sbsp
+    INTEGER :: tag_prf_Tvns, tag_prf_Svns
 
     !---
     bad_prf_trconst_T = 0
     bad_prf_trconst_S = 0
-    bad_prf_trconst = 0
     bad_prf_T1sp = 0
     bad_prf_Tbsp = 0
     bad_prf_S1sp = 0
     bad_prf_Sbsp = 0
     bad_prf_Tvns = 0
     bad_prf_Svns = 0
+
+    tag_prf_trconst_T = self%err_base + 1
+    tag_prf_trconst_S = self%err_base + 2
+    tag_prf_T1sp      = self%err_base + 3
+    tag_prf_Tbsp      = self%err_base + 4
+    tag_prf_S1sp      = self%err_base + 5
+    tag_prf_Sbsp      = self%err_base + 6
+    tag_prf_Tvns      = self%err_base + 7
+    tag_prf_Svns      = self%err_base + 8
 
     !--- main loop
     main : DO i = 1, obs_in%SIZE()
@@ -155,18 +166,13 @@ CONTAINS
                 IF (trTmax < prof%temp(k)) trTmax = prof%temp(k)
              ENDDO
              IF (ABS(trTmax-trTmin) < prf_trTmin) THEN
-                ! TODO, need to copy the profile before adding it to the
-                ! reject vector, otherwise the actual profile values will
-                ! not be retained (prof holds pointers to object, so the
-                ! contents of prof are currently being modified after
-                ! pushed back), same applies to salinity below.
                 bad_prf_trconst_T = bad_prf_trconst_T + 1
-                prof%tag = 60
-                CALL obs_rej%push_back(prof)
-                DEALLOCATE(prof%temp)
-                ALLOCATE(prof%temp(0))
+                prof_rej = prof%copy('T')
+                CALL prof%clear('T')
+                prof_rej%tag = tag_prf_trconst_T
+                CALL obs_rej%push_back(prof_rej)
              END IF
-          ENDIF ! (SIZE(prof%temp) /= 0)
+          ENDIF
 
           ! Salinity
           IF (SIZE(prof%salt) /= 0) THEN
@@ -178,28 +184,23 @@ CONTAINS
              ENDDO
              IF (ABS(trSmax-trSmin) < prf_trSmin) THEN
                 bad_prf_trconst_S = bad_prf_trconst_S + 1
-                prof%tag = 61
-                CALL obs_rej%push_back(prof)
-                DEALLOCATE(prof%salt)
-                ALLOCATE(prof%salt(0))
-             ENDIF ! (SIZE(prof%salt) /= 0)
-          ENDIF ! (trSmax-trSmin < prf_trSmin)
-
-          IF(SIZE(prof%salt) == 0 .AND. SIZE(prof%temp) == 0) THEN
-             !IF (tr_goodT + tr_goodS == 0) THEN
-             bad_prf_trconst = bad_prf_trconst + 1
-             prof%tag = 62
-             CALL obs_rej%push_back(prof)
-             CYCLE main
+                prof_rej = prof%copy('S')
+                CALL prof%clear('S')
+                prof_rej%tag = tag_prf_trconst_S
+                CALL obs_rej%push_back(prof_rej)
+             ENDIF
           ENDIF
 
-       ENDIF ! (pronf%lat <= prf_trlatN .and. pronf%lat >= prf_trlatS)
+          ! Make sure a T or S profile still exists
+          IF(SIZE(prof%salt) == 0 .AND. SIZE(prof%temp) == 0) CYCLE main
+       ENDIF
 
 
        !------------------------------------------------------------------------
        !--- $ check spikiness in Temp
+       ! TODO this logic does not work if there are missing levels in Temp
        !------------------------------------------------------------------------
-       IF (SIZE(prof%temp) >= 2 .AND. prof%temp(1) /= PROF_UNDEF) THEN
+       spike_temp: IF (SIZE(prof%temp) >= 2 .AND. prof%temp(1) /= PROF_UNDEF) THEN
 
           !-- dtdz at surface
           dtdz = (prof%temp(1)-prof%temp(2))/(prof%depth(2)-prof%depth(1))
@@ -207,8 +208,9 @@ CONTAINS
              !-dtdz, prof%temp(1),prof%temp(2),prof%temp(3)
              prof%temp(1) = prof%temp(2)
              bad_prf_T1sp = bad_prf_T1sp + 1
-             prof%tag = 64
-             CALL obs_rej%push_back(prof)
+             prof_rej = prof%copy('T')
+             prof_rej%tag = tag_prf_T1sp
+             CALL obs_rej%push_back(prof_rej)
           ENDIF ! (ABS(dtdz) > prf_T1spmax)
 
           !-- dtdz at bottom
@@ -217,8 +219,9 @@ CONTAINS
           IF (ABS(dtdz) > prf_Tbspmax) THEN
              !-dtdz, prof%temp(kb-2),prof%temp(kb-1),prof%temp(kb)
              bad_prf_Tbsp = bad_prf_Tbsp + 1
-             prof%tag = 65
-             CALL obs_rej%push_back(prof)
+             prof_rej = prof%copy('T')
+             prof_rej%tag = tag_prf_Tbsp
+             CALL obs_rej%push_back(prof_rej)
              prof%temp(kb) = PROF_UNDEF
           ENDIF ! (ABS(dtdz) > prf_Tbspmax)
 
@@ -236,24 +239,26 @@ CONTAINS
           dvrs = SQRT(dvns/kn)
           IF (dvrs > prf_Trsmx) THEN
              bad_prf_Tvns = bad_prf_Tvns + 1
-             prof%tag = 68
-             CALL obs_rej%push_back(prof)
-             prof%temp = PROF_UNDEF
+             prof_rej = prof%copy('T')
+             prof_rej%tag = tag_prf_Tvns
+             CALL obs_rej%push_back(prof_rej)
+             CALL prof%clear('T')
           ENDIF ! (dvrs > prf_Trsmx)
-       ENDIF ! (SIZE(prof%temp) >= 2)
+       ENDIF spike_temp ! (SIZE(prof%temp) >= 2)
 
        !------------------------------------------------------------------------
        !--- $ check spikiness in Salt
        !------------------------------------------------------------------------
-       IF (SIZE(prof%salt) >= 2 .AND. prof%salt(1) /= PROF_UNDEF) THEN
+       spike_salt: IF (SIZE(prof%salt) >= 2 .AND. prof%salt(1) /= PROF_UNDEF) THEN
           !-- dsdz at surface
           dsdz = (prof%salt(1)-prof%salt(2))/(prof%depth(2)-prof%depth(1))
           IF (ABS(dsdz) > prf_S1spmax) THEN
              !-dsdz, prof%salt(1),prof%salt(2),prof%salt(3)
              prof%salt(1) = prof%salt(2)
              bad_prf_S1sp = bad_prf_S1sp + 1
-             prof%tag = 66
-             CALL obs_rej%push_back(prof)
+             prof_rej = prof%copy('S')
+             prof_rej%tag = tag_prf_S1sp
+             CALL obs_rej%push_back(prof_rej)
           ENDIF ! (ABS(dsdz) > prf_S1spmax)
 
           !-- dsdz at bottom
@@ -262,8 +267,9 @@ CONTAINS
           IF (ABS(dsdz) > prf_Sbspmax) THEN
              !-dsdz, prof%salt(kb-2),prof%salt(kb-1),prof%salt(kb)
              bad_prf_Sbsp = bad_prf_Sbsp + 1
-             prof%tag = 67
-             CALL obs_rej%push_back(prof)
+             prof_rej = prof%copy('S')
+             prof_rej%tag = tag_prf_Sbsp
+             CALL obs_rej%push_back(prof_rej)
              prof%salt(kb) = PROF_UNDEF
           ENDIF ! (ABS(dsdz) > prf_Sbspmax)
 
@@ -281,39 +287,31 @@ CONTAINS
           dvrs = SQRT(dvns/kn)
           IF (dvrs > prf_Srsmx) THEN
              bad_prf_Svns = bad_prf_Svns + 1
-             prof%tag = 69
-             CALL obs_rej%push_back(prof)
-             DEALLOCATE(prof%salt)
-             ALLOCATE(prof%salt(0))
+             prof_rej = prof%copy('S')
+             prof_rej%tag = tag_prf_Svns
+             CALL obs_rej%push_back(prof_rej)
+             CALL prof%clear('S')
           ENDIF ! (dvrs > prf_Srsmx)
-       ENDIF ! (SIZE(prof%salt) >= 2)
+       ENDIF spike_salt ! (SIZE(prof%salt) >= 2)
 
-       ! make sure there are either valid T or S values remaining
-       IF (SIZE(prof%salt)+SIZE(prof%temp) > 0) THEN
-          CALL obs_out%push_back(prof)
-       END IF
+       ! Make sure a T or S profile still exists
+       IF(SIZE(prof%salt) == 0 .AND. SIZE(prof%temp) == 0) CYCLE main
+
+       ! if we made it this far, the profile is good
+       CALL obs_out%push_back(prof)
 
     END DO main ! i = 1, obs_in%SIZE()
     !---
 
-    IF(bad_prf_trconst_T > 0) &
-         PRINT '(I8,A)', bad_prf_trconst_T, ' profiles removed temp for near constant T profile, h60'
-    IF(bad_prf_trconst_S > 0) &
-         PRINT '(I8,A)', bad_prf_trconst_S, ' profiles removed salt for near constant S profile, h61'
-    IF(bad_prf_trconst > 0) &
-         PRINT '(I8,A)', bad_prf_trconst, ' profiles removed for near constant T and S profile, h62'
-    IF(bad_prf_T1sp > 0) &
-         PRINT '(I8,A)', bad_prf_T1sp, ' profiles fixed Temp at surface for spikiness, h64'
-    IF(bad_prf_Tbsp > 0) &
-         PRINT '(I8,A)', bad_prf_Tbsp, ' profiles removed bottom Temp for spikiness, h65'
-    IF(bad_prf_S1sp > 0) &
-         PRINT '(I8,A)', bad_prf_S1sp, ' profiles fixed Salt at surface for spikiness, h66'
-    IF(bad_prf_Sbsp > 0) &
-         PRINT '(I8,A)', bad_prf_Sbsp, ' profiles removed bottom Salt for spikiness, h67'
-    IF(bad_prf_Tvns > 0) &
-         PRINT '(I8,A)', bad_prf_Tvns, ' profiles of T removed for noisy profile in rms of dtdz**2, h68'
-    IF(bad_prf_Svns > 0) &
-         PRINT '(I8,A)', bad_prf_Svns, ' profiles of S removed for noisy profile in rms of dsdz**2, h69'
+
+    CALL print_rej_count(bad_prf_trconst_T, 'T profiles removed for near constant T profile', tag_prf_trconst_T)
+    CALL print_rej_count(bad_prf_trconst_S, 'S profiles removed for near constant S profile', tag_prf_trconst_T)
+    CALL print_rej_count(bad_prf_T1sp, 'T profiles fixed at surface for spikiness', tag_prf_T1sp)
+    CALL print_rej_count(bad_prf_Tbsp, 'T profiles fixed at bottom for spikiness', tag_prf_Tbsp)
+    CALL print_rej_count(bad_prf_S1sp, 'S profiles fixed at surface for spikiness', tag_prf_S1sp)
+    CALL print_rej_count(bad_prf_Sbsp, 'S profiles fixed at bottom for spikiness', tag_prf_Sbsp)
+    CALL print_rej_count(bad_prf_Tvns, 'T profiles removed for noisy rms of dtdz**2', tag_prf_Tvns)
+    CALL print_rej_count(bad_prf_Svns, 'S profiles removed for noisy rms of dsdz**2', tag_prf_Svns)
 
 
   END SUBROUTINE qc_step_check

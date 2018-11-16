@@ -15,8 +15,8 @@ MODULE qc_time_avg_mod
    CONTAINS
      PROCEDURE, NOPASS :: name  => qc_step_name
      PROCEDURE, NOPASS :: desc  => qc_step_desc
-     PROCEDURE, NOPASS :: init  => qc_step_init
-     PROCEDURE, NOPASS :: check => qc_step_check
+     PROCEDURE         :: init  => qc_step_init
+     PROCEDURE         :: check => qc_step_check
   END TYPE qc_time_avg
   !=============================================================================
 
@@ -58,7 +58,8 @@ CONTAINS
   !! subroutine is called multiple times.
   !! @param nmlfile  the unit number of the already open namelist file
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_init(nmlfile)
+  SUBROUTINE qc_step_init(self, nmlfile)
+    CLASS(qc_time_avg) :: self
     INTEGER, INTENT(in) :: nmlfile
 
     !NAMELIST /qc_time_avg/ var1, var2
@@ -79,7 +80,8 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out, obs_rej)
+  SUBROUTINE qc_step_check(self, obs_in, obs_out, obs_rej)
+    CLASS(qc_time_avg) :: self
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
     TYPE(vec_profile), INTENT(inout) :: obs_rej
@@ -153,12 +155,11 @@ CONTAINS
        END IF
 
        CALL obs_out%push_back(prof1)
-       
+
     END DO outer
 
     DEALLOCATE(prof_valid, prof_avg)
-    IF(rm_count > 0)&
-         PRINT '(I8,A)', rm_count, ' profiles removed for temporal/hz averaging'
+    CALL print_rej_count(rm_count, 'profiles removed for temporal/hz averaging',0)
 
   END SUBROUTINE qc_step_check
   !=============================================================================
@@ -187,18 +188,18 @@ CONTAINS
 
     ! determine the cumulative set of observation levels
     !------------------------------------------------------------
-    
+
     ! create a set containing all the unique depths
     depths_set = set_real()
-    do i = 1, size(obs_idx)  ! for each profile to be averaged...       
+    do i = 1, size(obs_idx)  ! for each profile to be averaged...
        prof_ptr => obs%of(obs_idx(i))
 
        ! TODO: consider rounding the depths?
 
        do j = 1, size(prof_ptr%depth) ! for each depth in the profile
-          call depths_set%insert(prof_ptr%depth(j))          
+          call depths_set%insert(prof_ptr%depth(j))
        end do
-          
+
        call prof_ptr%print()
     end do
 
@@ -212,7 +213,7 @@ CONTAINS
        call depths_itr%next()
     end do
 
-    
+
     ! for each level, calculate the number, mean, stddev
     allocate(stats_t(size(depths)))
     allocate(stats_s(size(depths)))
@@ -224,7 +225,7 @@ CONTAINS
 
           ! add value to the running stats
           call stats_t(j)%add(prof_ptr%temp(j))
-       end do       
+       end do
     end do
 
     ! TODO: rerun, not adding any profile levels that fall outside desired variance
@@ -239,12 +240,12 @@ CONTAINS
     deallocate(stats_s)
     deallocate(depths)
     stop 1
-       
+
   END FUNCTION average
   !=============================================================================
 
 
-  
+
 
   !=============================================================================
   !> returns the number of days between two dates

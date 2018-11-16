@@ -50,6 +50,8 @@ MODULE profile_mod
    CONTAINS
      PROCEDURE :: PRINT => profile_print
      PROCEDURE :: check => profile_check
+     PROCEDURE :: copy => profile_copy
+     PROCEDURE :: clear => profile_clear
   END TYPE profile
   !=============================================================================
 
@@ -190,10 +192,65 @@ CONTAINS
     IF(SIZE(self%salt) == 0 .AND. SIZE(self%temp) == 0) THEN
        code = PROF_CHECK_NO_VARS
     END IF
-
-
   END SUBROUTINE profile_check
 
+
+
+  FUNCTION profile_copy(self, ts) RESULT(copy)
+    CLASS(profile), INTENT(inout) :: self
+    CHARACTER, OPTIONAL :: ts
+    TYPE(profile) :: copy
+
+    IF(PRESENT(ts)) THEN
+       IF(ts /= 'T' .AND. ts /= 'S') THEN
+          PRINT *, "ERROR: profile%copy() must be called empty, or with 'T' or 'S' "
+          STOP 1
+       END IF
+    END IF
+
+    copy%date = self%date
+    copy%hour = self%hour
+    copy%id = self%id
+    copy%lat = self%lat
+    copy%lon = self%lon
+    copy%plat = self%plat
+    ALLOCATE(copy%depth(SIZE(self%depth)))
+    copy%depth = self%depth
+
+    IF(PRESENT(ts) .AND. ts =='T') THEN
+       ALLOCATE(copy%temp(SIZE(self%temp)))
+       copy%temp = self%temp
+    ELSE
+       ALLOCATE(copy%temp(0))
+    END IF
+
+    IF(PRESENT(ts) .AND. ts == 'S') THEN
+       ALLOCATE(copy%salt(SIZE(self%salt)))
+       copy%salt = self%salt
+    ELSE
+       ALLOCATE(copy%salt(0))
+    END IF
+
+  END FUNCTION profile_copy
+
+
+
+
+  SUBROUTINE profile_clear(self, ts)
+    CLASS(profile), INTENT(inout) :: self
+    CHARACTER :: ts
+
+    IF(ts == 'T') THEN
+      DEALLOCATE(self%temp)
+      ALLOCATE(self%temp(0))
+    ELSE IF(ts == 'S') THEN
+      DEALLOCATE(self%salt)
+      ALLOCATE(self%salt(0))
+    ELSE
+      PRINT *, "ERROR: profile%clear() must be called with 'T' or 'S' "
+      STOP 1
+    END IF
+  END SUBROUTINE profile_clear
 
 END MODULE profile_mod
 !===============================================================================

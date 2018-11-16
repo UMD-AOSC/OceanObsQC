@@ -18,8 +18,8 @@ MODULE qc_duplicate_mod
    CONTAINS
      PROCEDURE, NOPASS :: name  => qc_step_name
      PROCEDURE, NOPASS :: desc  => qc_step_desc
-     PROCEDURE, NOPASS :: init  => qc_step_init
-     PROCEDURE, NOPASS :: check => qc_step_check
+     PROCEDURE         :: init  => qc_step_init
+     PROCEDURE         :: check => qc_step_check
   END TYPE qc_duplicate
   !=============================================================================
 
@@ -56,7 +56,8 @@ CONTAINS
   !! subroutine is called multiple times.
   !! @param nmlfile  the unit number of the already open namelist file
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_init(nmlfile)
+  SUBROUTINE qc_step_init(self, nmlfile)
+    CLASS(qc_duplicate) :: self
     INTEGER, INTENT(in) :: nmlfile
 
     !NAMELIST /qc_duplicate/ var1, var2
@@ -77,7 +78,8 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out, obs_rej)
+  SUBROUTINE qc_step_check(self, obs_in, obs_out, obs_rej)
+    CLASS(qc_duplicate) :: self
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
     TYPE(vec_profile), INTENT(inout) :: obs_rej
@@ -139,6 +141,7 @@ CONTAINS
           prof1 => obs_in%of(i)
           CALL obs_out%push_back(prof1)
        ELSE
+          prof1%tag = self%err_base + 1
           CALL obs_rej%push_back(prof1)
           count = count + 1
        END IF
@@ -146,8 +149,10 @@ CONTAINS
 
 
     ! print out stats if any profiles were removed
-    IF(count > 0)&
-         PRINT '(I8,A)', count, ' duplicate profiles removed'
+    call print_rej_count(count, "duplicate profiles removed", self%err_base+1)
+    !IF(count > 0)&
+         !PRINT '(I8,A)', count, ' duplicate profiles removed (',self%err_base,')'
+
 
   END SUBROUTINE qc_step_check
   !=============================================================================

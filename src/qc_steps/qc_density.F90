@@ -16,8 +16,8 @@ MODULE qc_density_mod
    CONTAINS
      PROCEDURE, NOPASS :: name  => qc_step_name
      PROCEDURE, NOPASS :: desc  => qc_step_desc
-     PROCEDURE, NOPASS :: init  => qc_step_init
-     PROCEDURE, NOPASS :: check => qc_step_check
+     PROCEDURE         :: init  => qc_step_init
+     PROCEDURE         :: check => qc_step_check
   END TYPE qc_density
   !=============================================================================
 
@@ -58,7 +58,8 @@ CONTAINS
   !! subroutine is called multiple times.
   !! @param nmlfile  the unit number of the already open namelist file
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_init(nmlfile)
+  SUBROUTINE qc_step_init(self, nmlfile)
+    CLASS(qc_density) :: self
     INTEGER, INTENT(in) :: nmlfile
 
     NAMELIST /qc_density/ dens_inv_tol
@@ -79,7 +80,8 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out, obs_rej)
+  SUBROUTINE qc_step_check(self, obs_in, obs_out, obs_rej)
+    CLASS(qc_density) :: self
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
     TYPE(vec_profile), INTENT(inout) :: obs_rej
@@ -90,8 +92,11 @@ CONTAINS
     REAL(8), ALLOCATABLE :: pot_rho(:), sa(:), pres(:)
 
     INTEGER :: bad_densinv
+    INTEGER :: tag_densinv
 
     bad_densinv = 0
+    tag_densinv = self%err_base + 1
+
     do_prof: DO i = 1, obs_in%SIZE()
        prof => obs_in%of(i)
        keep = .TRUE.
@@ -132,8 +137,7 @@ CONTAINS
 
              IF (pot_rho(j) - pot_rho(k) > dens_inv_tol) THEN
 
-                ! if we found a density inversion, done use this profile
-                bad_densinv = bad_densinv + 1
+                ! if we found a density inversion, dont use this profile
                 keep = .FALSE.
                 EXIT do_lvl
 
@@ -150,7 +154,8 @@ CONTAINS
        IF(keep) THEN
           CALL obs_out%push_back(prof)
        ELSE
-          prof%tag = -1 !TODO, give valid tag
+          bad_densinv = bad_densinv + 1
+          prof%tag = tag_densinv
           CALL obs_rej%push_back(prof)
        END IF
 
@@ -158,8 +163,7 @@ CONTAINS
     END DO do_prof
 
     ! print out stats if any profiles were removed
-    IF(bad_densinv > 0)&
-         PRINT '(I8,A)', bad_densinv, ' profiles removed for density inversion'
+    CALL print_rej_count(bad_densinv,'profiles removed for density inversion',tag_densinv)
 
   END SUBROUTINE qc_step_check
   !=============================================================================

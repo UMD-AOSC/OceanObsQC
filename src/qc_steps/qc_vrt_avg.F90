@@ -15,8 +15,8 @@ MODULE qc_vrt_avg_mod
    CONTAINS
      PROCEDURE, NOPASS :: name  => qc_step_name
      PROCEDURE, NOPASS :: desc  => qc_step_desc
-     PROCEDURE, NOPASS :: init  => qc_step_init
-     PROCEDURE, NOPASS :: check => qc_step_check
+     PROCEDURE         :: init  => qc_step_init
+     PROCEDURE         :: check => qc_step_check
   END TYPE qc_vrt_avg
   !=============================================================================
 
@@ -37,7 +37,7 @@ CONTAINS
 
   !=============================================================================
   !> A short, human friendly, description of what this QC step does.
-  !! Should ideally fit on one line
+  !! Should ideally fit on one line          prof%tag = -1 !TODO, give valid tag
   !-----------------------------------------------------------------------------
   FUNCTION qc_step_desc() RESULT(desc)
     CHARACTER(:), ALLOCATABLE :: desc
@@ -53,7 +53,8 @@ CONTAINS
   !! subroutine is called multiple times.
   !! @param nmlfile  the unit number of the already open namelist file
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_init(nmlfile)
+  SUBROUTINE qc_step_init(self, nmlfile)
+    CLASS(qc_vrt_avg) :: self
     INTEGER, INTENT(in) :: nmlfile
 
     !NAMELIST /qc_vrt_avg/ var1, var2
@@ -74,7 +75,8 @@ CONTAINS
   !! @param obs_in   a vector of input "profile" types
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
-  SUBROUTINE qc_step_check(obs_in, obs_out, obs_rej)
+  SUBROUTINE qc_step_check(self, obs_in, obs_out, obs_rej)
+    CLASS(qc_vrt_avg) :: self
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
     TYPE(vec_profile), INTENT(inout) :: obs_rej

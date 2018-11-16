@@ -39,6 +39,7 @@ PROGRAM obsqc
   TYPE(profile), POINTER :: prof
   INTEGER :: rm_count(6)
   INTEGER :: qcsteps_idx
+  INTEGER :: qc_step_run_cnt
 
   TYPE(obs_reader_ptr) :: obs_reader_wrapper
   TYPE(obs_writer_ptr) :: obs_writer_wrapper
@@ -140,11 +141,12 @@ PROGRAM obsqc
   PRINT  '(A,I0)',' QC plugins registered: ', qc_steps%SIZE()
   DO i=1, qc_steps%SIZE()
     qc_step_wrapper = qc_steps%get(i)
+    qc_step_wrapper%p%err_base = i*100
     print *, "* ", qc_step_wrapper%p%name()
   END DO
 
   obs_rej = vec_profile()
-
+  qc_step_run_cnt = 0
   DO WHILE( LEN(qcsteps) > 0)
     ! loop over all the qc step names specified in the namelist string
     qcsteps_idx = SCAN(qcsteps, ';, ')
@@ -155,13 +157,14 @@ PROGRAM obsqc
 
       ! if this matches the current qc step we are trying to match, continue
       IF (trim(qcsteps(:qcsteps_idx-1)) /= qc_step_wrapper%p%name()) CYCLE
+      qc_step_run_cnt = qc_step_run_cnt + 1
 
       CALL cpu_TIME(timer_start)
       obs_good = vec_profile()
 
       PRINT *, ""
       PRINT *, ""
-      PRINT '(I3,5A)', i, ') ', qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
+      PRINT '(I3,5A)', qc_step_run_cnt, ') ', qc_step_wrapper%p%name(), ' - (',qc_step_wrapper%p%desc(),')'
       PRINT *, "---------------------------------------------"
 
       ! initialize the module
