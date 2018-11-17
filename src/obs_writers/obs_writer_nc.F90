@@ -46,7 +46,7 @@ CONTAINS
     INTEGER :: ncid, d_prfs, d_obs, vid
 
     TYPE(profile), POINTER :: prf
-    INTEGER :: obs_count, obs_offset, obs_len, i, j, p, o
+    INTEGER :: obs_count, obs_offset, obs_len, i, j, p, o, k
     INTEGER :: prf_count
 
     REAL,    ALLOCATABLE :: prf_lat(:)
@@ -76,12 +76,20 @@ CONTAINS
     DO i=1,obs%SIZE()
        prf => obs%of(i)
        IF( SIZE(prf%temp) > 0) THEN
-          prf_count = prf_count + 1
-          obs_count = obs_count + SIZE(prf%temp)
+          prf_count = prf_count + 1          
+          DO j=1,SIZE(prf%temp)
+             IF (prf%temp(j) /= PROF_UNDEF) THEN
+                obs_count = obs_count + 1
+             END IF
+          END DO          
        END IF
        IF( SIZE(prf%salt) > 0) THEN
           prf_count = prf_count + 1
-          obs_count = obs_count + SIZE(prf%salt)
+          DO j=1,SIZE(prf%salt)
+             IF (prf%salt(j) /= PROF_UNDEF) THEN
+                obs_count = obs_count + 1
+             END IF
+          END DO
        END IF
     END DO
 
@@ -102,8 +110,9 @@ CONTAINS
     DO i=1,obs%SIZE()
        prf => obs%of(i)
        DO j=1,2
-          IF (j==1 .AND. SIZE(prf%temp) == 0) CYCLE
-          IF (j==2 .AND. SIZE(prf%salt) == 0) CYCLE
+          obs_len = MERGE(SIZE(prf%temp), SIZE(prf%salt), j==1)
+          IF (obs_len == 0) CYCLE
+          
           p = p + 1
           prf_lat(p) = prf%lat
           prf_lon(p) = prf%lon
@@ -112,12 +121,20 @@ CONTAINS
           prf_hr(p)  = prf%hour
           prf_type(p) = j
           prf_obsidx(p) = obs_offset
-
-          obs_len = MERGE(SIZE(prf%temp), SIZE(prf%salt), j==1)
-          prf_obslen(p) = obs_len
-          obs_depth(obs_offset:obs_offset+obs_len-1) = prf%depth
-          obs_val(obs_offset:obs_offset+obs_len-1) = MERGE(prf%temp, prf%salt, j==1)
-          obs_offset = obs_offset + obs_len
+          prf_obslen(p) = 0
+          
+          DO k=1,obs_len
+             obs_depth(obs_offset) = prf%depth(k)
+             IF (j==1) THEN
+                IF (prf%temp(k) == PROF_UNDEF) CYCLE
+                obs_val(obs_offset) = prf%temp(k)
+             ELSE
+                IF (prf%salt(k) == PROF_UNDEF) CYCLE                
+                obs_val(obs_offset) = prf%salt(k)
+             END IF             
+             prf_obslen(p) = prf_obslen(p) + 1             
+             obs_offset = obs_offset + 1
+          END DO
        END DO
     END DO
 
