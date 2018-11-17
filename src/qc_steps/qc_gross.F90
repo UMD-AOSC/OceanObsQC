@@ -1,23 +1,24 @@
 !===============================================================================
 !>
 !-------------------------------------------------------------------------------
-MODULE qc_bounds_mod
+MODULE qc_gross_mod
   USE qc_step_mod
   USE profile_mod
   USE vec_profile_mod
-
+  USE, INTRINSIC :: ieee_arithmetic
+  
   IMPLICIT NONE
   PRIVATE
 
   !=============================================================================
   !-----------------------------------------------------------------------------
-  TYPE, EXTENDS(qc_step), PUBLIC :: qc_bounds
+  TYPE, EXTENDS(qc_step), PUBLIC :: qc_gross
    CONTAINS
      PROCEDURE, NOPASS :: name  => qc_step_name
      PROCEDURE, NOPASS :: desc  => qc_step_desc
      PROCEDURE         :: init  => qc_step_init
      PROCEDURE         :: check => qc_step_check
-  END TYPE qc_bounds
+  END TYPE qc_gross
   !=============================================================================
 
 
@@ -39,7 +40,7 @@ CONTAINS
   !-----------------------------------------------------------------------------
   FUNCTION qc_step_name() RESULT(name)
     CHARACTER(:), ALLOCATABLE :: name
-    name = "qc_bounds"
+    name = "qc_gross"
   END FUNCTION qc_step_name
   !=============================================================================
 
@@ -64,13 +65,13 @@ CONTAINS
   !! @param nmlfile  the unit number of the already open namelist file
   !-----------------------------------------------------------------------------
   SUBROUTINE qc_step_init(self, nmlfile)
-    CLASS(qc_bounds) :: self
+    CLASS(qc_gross) :: self
     INTEGER, INTENT(in) :: nmlfile
 
-    NAMELIST /qc_bounds/ &
+    NAMELIST /qc_gross/ &
          remove_zero_latlon, t_min, t_max, s_min, s_max
-    READ(nmlfile, qc_bounds)
-    PRINT qc_bounds
+    READ(nmlfile, qc_gross)
+    PRINT qc_gross
 
   END SUBROUTINE qc_step_init
   !=============================================================================
@@ -87,7 +88,7 @@ CONTAINS
   !! @param obs_out  a vector of the output "profile" types
   !-----------------------------------------------------------------------------
   SUBROUTINE qc_step_check(self, obs_in, obs_out, obs_rej)
-    CLASS(qc_bounds) :: self
+    CLASS(qc_gross) :: self
     TYPE(vec_profile), INTENT(in)    :: obs_in
     TYPE(vec_profile), INTENT(inout) :: obs_out
     TYPE(vec_profile), INTENT(inout) :: obs_rej
@@ -97,9 +98,9 @@ CONTAINS
     TYPE(profile) :: prof_rej
 
     INTEGER :: bad_zero_latlon, bad_t_max, bad_t_min, bad_s_max, &
-         bad_s_min, bad_lat, bad_lon, bad_date, bad_hour
+         bad_s_min, bad_lat, bad_lon, bad_date, bad_hour, bad_t_nan, bad_s_nan
     INTEGER :: tag_zero_latlon, tag_t_max, tag_t_min, tag_s_max, &
-         tag_s_min, tag_lat, tag_lon, tag_date, tag_hour
+         tag_s_min, tag_lat, tag_lon, tag_date, tag_hour, tag_t_nan, tag_s_nan
     LOGICAL :: keep
 
     INTEGER :: yr, mn, dy
@@ -113,8 +114,10 @@ CONTAINS
     bad_hour = 0
     bad_t_max = 0
     bad_t_min = 0
+    bad_t_nan = 0
     bad_s_max = 0
     bad_s_min = 0
+    bad_s_nan = 0
 
     ! initialize error tag values
     tag_lat         = self%err_base + 1
@@ -124,8 +127,10 @@ CONTAINS
     tag_hour        = self%err_base + 5
     tag_t_max       = self%err_base + 6
     tag_t_min       = self%err_base + 7
-    tag_s_max       = self%err_base + 8
-    tag_s_min       = self%err_base + 9
+    tag_t_nan       = self%err_base + 8
+    tag_s_max       = self%err_base + 9
+    tag_s_min       = self%err_base + 10
+    tag_s_nan       = self%err_base + 11
 
     ! check each profile
     do_loop: DO i = 1, obs_in%SIZE()
@@ -165,8 +170,22 @@ CONTAINS
        yr = prof%date / 10000
        mn = MOD((prof%date / 100 ), 100)
        dy = MOD(prof%date, 100)
-       ! TODO, check actual dates
-       IF (mn < 1 .or. mn > 12 .or. dy <= 0 .or. dy > 31) THEN
+       keep = .TRUE.
+       ! gross check on dates, i'm assuming my code will no longer be used by year 2100...     
+       IF (mn<1 .or. mn >12 .or. dy<=0 .or. dy >31 .or. yr<1000 .or. yr>2100) keep = .FALSE.
+       ! months with 30 days
+       IF ((mn==9 .or. mn==4 .or. mn==6 .or. mn==11) .and. dy > 30) keep = .FALSE.
+       IF( mn == 2) THEN
+          IF(mod(yr,4)==0 .and. (mod(yr,100)/=0 .or. mod(yr,400)==0)) THEN
+             ! feb, during leap year
+             IF ( dy > 29) keep = .FALSE.
+          ELSE
+             ! feb, during non-leap year
+             IF ( dy > 28) keep = .FALSE.
+          END IF
+       END IF
+       IF (.NOT. keep) THEN
+          ! otherwise, bad date
           bad_date = bad_date + 1
           prof%tag = tag_date
           CALL obs_rej%push_back(prof)
@@ -185,7 +204,6 @@ CONTAINS
        
        
        ! check bad temperature values
-       ! TODO, check for NaNs
        temp_loop: DO k=1, SIZE(prof%temp)
           IF(prof%temp(k) == PROF_UNDEF) CYCLE
 
@@ -198,6 +216,10 @@ CONTAINS
              bad_t_min = bad_t_min + 1
              prof_rej = prof%copy('T')
              prof_rej%tag = tag_t_min
+          ELSE IF( IEEE_IS_NAN(prof%temp(k))) THEN
+             bad_t_nan = bad_t_nan + 1
+             prof_rej = prof%copy('T')
+             prof_rej%tag = tag_t_nan
           ELSE
              keep=.TRUE.
           END IF
@@ -223,7 +245,11 @@ CONTAINS
              bad_s_min = bad_s_min + 1
              prof_rej = prof%copy('S')
              prof_rej%tag = tag_s_min
-          ELSE
+          ELSE IF( IEEE_IS_NAN(prof%salt(k))) THEN
+             bad_s_nan = bad_s_nan + 1
+             prof_rej = prof%copy('S')
+             prof_rej%tag = tag_s_nan
+          ELSE             
              keep=.TRUE.
           END IF
 
@@ -255,10 +281,12 @@ CONTAINS
     CALL print_rej_count(bad_hour, 'profiles removed for bad hour', tag_hour)
     CALL print_rej_count(bad_t_max, 'T profiles removed because T > t_max', tag_t_max)
     CALL print_rej_count(bad_t_min, 'T profiles removed because T < t_min', tag_t_min)
+    CALL print_rej_count(bad_t_nan, 'T profiles removed because T == NaN',  tag_t_nan) 
     CALL print_rej_count(bad_s_max, 'S profiles removed because S > s_max', tag_s_max)
     CALL print_rej_count(bad_s_min, 'S profiles removed because S < s_min', tag_s_min)
+    CALL print_rej_count(bad_s_nan, 'S profiles removed because S == NaN',  tag_s_nan) 
 
   END SUBROUTINE qc_step_check
   !=============================================================================
 
-END MODULE qc_bounds_mod
+END MODULE qc_gross_mod

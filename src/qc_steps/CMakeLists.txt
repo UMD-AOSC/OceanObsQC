@@ -10,7 +10,7 @@ set(PLUGINS
   qc_duplicate
   qc_vrt_avg
   qc_depths
-  qc_bounds
+  qc_gross
   qc_clim
   qc_profile
   qc_density
