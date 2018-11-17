@@ -176,7 +176,7 @@ CONTAINS
 
        ! check for a bad hour
        IF(prof%hour == PROF_UNDEF) prof%hour = 12.0       
-       IF (prof%hour < 0 .OR. prof%hour >= 24.0) THEN
+       IF (prof%hour < 0 .OR. prof%hour > 24.0) THEN
           bad_hour = bad_hour + 1
           prof%tag = tag_hour
           CALL obs_rej%push_back(prof)
