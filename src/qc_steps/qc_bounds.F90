@@ -97,28 +97,35 @@ CONTAINS
     TYPE(profile) :: prof_rej
 
     INTEGER :: bad_zero_latlon, bad_t_max, bad_t_min, bad_s_max, &
-         bad_s_min, bad_lat, bad_lon
+         bad_s_min, bad_lat, bad_lon, bad_date, bad_hour
     INTEGER :: tag_zero_latlon, tag_t_max, tag_t_min, tag_s_max, &
-         tag_s_min, tag_lat, tag_lon
+         tag_s_min, tag_lat, tag_lon, tag_date, tag_hour
     LOGICAL :: keep
 
+    INTEGER :: yr, mn, dy
+    REAL :: hr
+    
     ! initialize bad obs counts
     bad_zero_latlon = 0
+    bad_lat = 0
+    bad_lon = 0
+    bad_date = 0
+    bad_hour = 0
     bad_t_max = 0
     bad_t_min = 0
     bad_s_max = 0
     bad_s_min = 0
-    bad_lat = 0
-    bad_lon = 0
 
     ! initialize error tag values
     tag_lat         = self%err_base + 1
     tag_lon         = self%err_base + 2
     tag_zero_latlon = self%err_base + 3
-    tag_t_max       = self%err_base + 4
-    tag_t_min       = self%err_base + 5
-    tag_s_max       = self%err_base + 6
-    tag_s_min       = self%err_base + 7
+    tag_date        = self%err_base + 4
+    tag_hour        = self%err_base + 5
+    tag_t_max       = self%err_base + 6
+    tag_t_min       = self%err_base + 7
+    tag_s_max       = self%err_base + 8
+    tag_s_min       = self%err_base + 9
 
     ! check each profile
     do_loop: DO i = 1, obs_in%SIZE()
@@ -153,8 +160,32 @@ CONTAINS
           END IF
        END IF
 
+       
+       ! check for bad date
+       yr = prof%date / 10000
+       mn = MOD((prof%date / 100 ), 100)
+       dy = MOD(prof%date, 100)
+       ! TODO, check actual dates
+       IF (mn < 1 .or. mn > 12 .or. dy <= 0 .or. dy > 31) THEN
+          bad_date = bad_date + 1
+          prof%tag = tag_date
+          CALL obs_rej%push_back(prof)
+          CYCLE do_loop
+       END IF
 
+
+       ! check for a bad hour
+       IF(prof%hour == PROF_UNDEF) prof%hour = 12.0       
+       IF (prof%hour < 0 .OR. prof%hour >= 24.0) THEN
+          bad_hour = bad_hour + 1
+          prof%tag = tag_hour
+          CALL obs_rej%push_back(prof)
+          CYCLE do_loop
+       END IF
+       
+       
        ! check bad temperature values
+       ! TODO, check for NaNs
        temp_loop: DO k=1, SIZE(prof%temp)
           IF(prof%temp(k) == PROF_UNDEF) CYCLE
 
@@ -220,6 +251,8 @@ CONTAINS
     CALL print_rej_count(bad_lat, 'profiles removed for bad latitude', tag_lat)
     CALL print_rej_count(bad_lon, 'profiles removed for bad longitude', tag_lon)
     CALL print_rej_count(bad_zero_latlon, 'profiles removed because lat=0.0 and lon=0.0', tag_zero_latlon)
+    CALL print_rej_count(bad_date, 'profiles removed for bad date', tag_date)
+    CALL print_rej_count(bad_hour, 'profiles removed for bad hour', tag_hour)
     CALL print_rej_count(bad_t_max, 'T profiles removed because T > t_max', tag_t_max)
     CALL print_rej_count(bad_t_min, 'T profiles removed because T < t_min', tag_t_min)
     CALL print_rej_count(bad_s_max, 'S profiles removed because S > s_max', tag_s_max)
