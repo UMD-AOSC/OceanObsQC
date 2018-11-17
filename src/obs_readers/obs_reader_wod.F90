@@ -202,7 +202,7 @@ CONTAINS
 
     ! hour. Replace with 12Z if no hour is given (likely due to daily averaging)
     ob%hour = readReal() ! hour, fractional
-    IF(ob%hour == PROF_UNDEF) ob%hour = 12.0
+    IF(ob%hour == WOD_UNDEF_REAL) ob%hour = 12.0
 
     ob%lat = readReal() ! latitude
     ob%lon = readReal() ! longitude
