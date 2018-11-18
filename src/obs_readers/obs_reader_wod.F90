@@ -143,7 +143,7 @@ CONTAINS
     INTEGER :: prof_len, num_var, num_var_meta
     INTEGER :: num_taxa, num_taxa_entries
 
-    INTEGER :: var_code(10)
+    INTEGER :: var_code(100)
     CHARACTER*2 :: cc
 
 
