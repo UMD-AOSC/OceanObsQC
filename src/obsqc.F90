@@ -168,9 +168,12 @@ PROGRAM obsqc
       PRINT *, "---------------------------------------------"
 
       ! initialize the module
-      REWIND(nmlfile)
-      CALL qc_step_wrapper%p%init(nmlfile)
-
+      IF(.NOT. qc_step_wrapper%p%initialized) THEN
+         REWIND(nmlfile)
+         CALL qc_step_wrapper%p%init(nmlfile)
+         qc_step_wrapper%p%initialized = .TRUE.
+      END IF
+      
       ! perform the QC step
       CALL qc_step_wrapper%p%check(obs, obs_good, obs_rej)
 

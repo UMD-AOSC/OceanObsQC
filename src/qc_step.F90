@@ -12,7 +12,8 @@ MODULE qc_step_mod
   !> Each class derrived from this must have a unique "name"
   !-----------------------------------------------------------------------------
   TYPE, PUBLIC, ABSTRACT:: qc_step
-    INTEGER :: err_base
+     INTEGER :: err_base
+     LOGICAL :: initialized = .FALSE.
    CONTAINS
      PROCEDURE(I_qc_step_getstr), NOPASS, DEFERRED :: name
      PROCEDURE(I_qc_step_getstr), NOPASS, DEFERRED :: desc

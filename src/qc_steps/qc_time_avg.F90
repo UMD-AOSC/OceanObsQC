@@ -182,9 +182,8 @@ CONTAINS
     real :: r
     real, allocatable :: depths(:)
     type(running_stats), allocatable :: stats_t(:), stats_s(:)
-    integer :: i, j
-    print *, size(obs_idx)
-
+    type(running_stats) :: stats_lat, stats_lon, stats_hr
+    integer :: i, j, idx
 
     ! determine the cumulative set of observation levels
     !------------------------------------------------------------
@@ -199,11 +198,11 @@ CONTAINS
        do j = 1, size(prof_ptr%depth) ! for each depth in the profile
           call depths_set%insert(prof_ptr%depth(j))
        end do
-
-       call prof_ptr%print()
     end do
 
+    
     ! get the final list of depths from the set
+    ! TODO possibily thin the set, if obs aren't using standard levels?
     allocate(depths(depths_set%size()))
     depths_itr = depths_set%begin()
     i = 1
@@ -214,37 +213,94 @@ CONTAINS
     end do
 
 
+
     ! for each level, calculate the number, mean, stddev
+    ! also average the other variables (lat,lon,time)
     allocate(stats_t(size(depths)))
     allocate(stats_s(size(depths)))
     do i = 1, size(obs_idx)
        prof_ptr => obs%of(obs_idx(i))
 
+       CALL stats_lat%add(real(prof_ptr%lat))
+       CALL stats_lon%add(real(prof_ptr%lon))
+       CALL stats_hr%add(prof_ptr%hour)
+
+       idx=1
        do j = 1, size(prof_ptr%depth)
-          ! TODO: determine the depth level using binary search
+          ! determine the next closest target depth level
+          idx = findClosest(prof_ptr%depth(j), depths(idx:))+idx-1
 
           ! add value to the running stats
-          call stats_t(j)%add(prof_ptr%temp(j))
+          IF(j <= SIZE(prof_ptr%temp) .AND. prof_ptr%temp(j) /= PROF_UNDEF) THEN
+             call stats_t(idx)%add(prof_ptr%temp(j))
+          END IF
+          IF(j <= SIZE(prof_ptr%salt) .AND. prof_ptr%salt(j) /= PROF_UNDEF) THEN
+             call stats_s(idx)%add(prof_ptr%salt(j))
+          END IF
+          
        end do
     end do
 
+    
     ! TODO: rerun, not adding any profile levels that fall outside desired variance
     ! TODO: remove levels that have insufficent number of obs compared with other levels
     ! TODO: remove levels that have stddev too large
-    do i = 1, size(depths)
-       print *, depths(i), stats_t(i)%count, stats_t(i)%mean(), stats_t(i)%variance()
+
+    ! generate final averaged profile
+    prof%id  = prof_ptr%id
+    prof%lat = stats_lat%mean()
+    prof%lon = stats_lon%mean()
+    prof%date = prof_ptr%date
+    prof%hour = stats_hr%mean()
+    prof%plat = prof_ptr%plat
+    allocate(prof%depth(size(depths)))
+    allocate(prof%salt(size(depths)))
+    allocate(prof%temp(size(depths)))
+    prof%depth=depths
+    prof%salt=PROF_UNDEF
+    prof%temp=PROF_UNDEF
+    do i=1,size(depths)
+       IF(stats_t(i)%count > 0) prof%temp(i) = stats_t(i)%mean()
+       IF(stats_s(i)%count > 0) prof%salt(i) = stats_s(i)%mean()       
     end do
 
-    ! TODO: generate final averaged profile
+    ! remove salt/ temp profiles that are empty
+    IF(minval(prof%temp) == PROF_UNDEF) call prof%clear('T')
+    IF(minval(prof%salt) == PROF_UNDEF) call prof%clear('S')
+
+    ! done, cleanup
     deallocate(stats_t)
     deallocate(stats_s)
     deallocate(depths)
-    stop 1
 
   END FUNCTION average
   !=============================================================================
 
 
+  
+  PURE FUNCTION findclosest(val, list) RESULT(res)
+    REAL, INTENT(IN) :: val
+    REAL, INTENT(IN) :: list(:)
+    INTEGER :: res
+
+    REAL :: dist, dist2
+    INTEGER :: i
+    
+    res = -1
+    dist = 1e36
+
+    DO i = 1, size(list)
+       dist2 = abs(val - list(i))
+       if(dist2 < dist) THEN
+          dist = dist2
+       ELSE
+          res = i-1
+          return
+       END IF       
+    end DO
+    res = size(list)    
+  END FUNCTION FINDCLOSEST
+  
 
 
   !=============================================================================

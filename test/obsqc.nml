@@ -5,13 +5,13 @@
 &obsqc_nml
   obs_reader_type="WOD"  ! options are: BUFR, WOD
   obs_writer_type="NC"    ! options are: NC
-  !qcsteps="qc_bounds qc_duplicate qc_depths qc_global qc_density"
-  qcsteps="qc_duplicate qc_depths qc_bounds qc_clim qc_density"
+  !qcsteps="qc_gross qc_duplicate qc_depths qc_global qc_density"
+  qcsteps="qc_duplicate qc_depths qc_gross qc_clim qc_depths qc_density qc_time_avg"
 
   ! only keep profiles between these dates (YYYYMMDD)
   ! if commented out, all dates are kept
-!  read_start_date = 20070710
-!  read_end_date   = 20070711
+!  read_start_date = 20030101
+!  read_end_date   = 20030101
 /
 
 
@@ -50,7 +50,7 @@
 /
 
 
-&qc_bounds
+&qc_gross
   remove_zero_latlon = T
   t_max = 33.0
   t_min = -2.0
