@@ -124,14 +124,14 @@ CONTAINS
           prf_obslen(p) = 0
           
           DO k=1,obs_len
-             obs_depth(obs_offset) = prf%depth(k)
              IF (j==1) THEN
                 IF (prf%temp(k) == PROF_UNDEF) CYCLE
                 obs_val(obs_offset) = prf%temp(k)
              ELSE
                 IF (prf%salt(k) == PROF_UNDEF) CYCLE                
                 obs_val(obs_offset) = prf%salt(k)
-             END IF             
+             END IF
+             obs_depth(obs_offset) = prf%depth(k)
              prf_obslen(p) = prf_obslen(p) + 1             
              obs_offset = obs_offset + 1
           END DO

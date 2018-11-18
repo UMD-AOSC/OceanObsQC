@@ -231,11 +231,13 @@ CONTAINS
           idx = findClosest(prof_ptr%depth(j), depths(idx:))+idx-1
 
           ! add value to the running stats
-          IF(j <= SIZE(prof_ptr%temp) .AND. prof_ptr%temp(j) /= PROF_UNDEF) THEN
-             call stats_t(idx)%add(prof_ptr%temp(j))
+          IF(j <= SIZE(prof_ptr%temp) ) THEN
+             IF (prof_ptr%temp(j) /= PROF_UNDEF) &
+                  call stats_t(idx)%add(prof_ptr%temp(j))
           END IF
-          IF(j <= SIZE(prof_ptr%salt) .AND. prof_ptr%salt(j) /= PROF_UNDEF) THEN
-             call stats_s(idx)%add(prof_ptr%salt(j))
+          IF(j <= SIZE(prof_ptr%salt)) THEN
+             IF (prof_ptr%salt(j) /= PROF_UNDEF) &
+                  call stats_s(idx)%add(prof_ptr%salt(j))
           END IF
           
        end do
