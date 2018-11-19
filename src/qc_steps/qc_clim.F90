@@ -25,19 +25,21 @@ MODULE qc_clim_mod
 
 
   ! parameters to be read from namelist
-  REAL :: clim_searchdist = 200e3
-  REAL :: cobs_gros_MIN_T = 2.0                     ! minimum of the gross off set check for temp
-  REAL :: cobs_gros_MAX_T = 20.0                    ! maximum of the gross off set check for temp
-  REAL :: cobs_gros_MIN_S = 0.3                     ! minimum of the gross off set check for salt
-  REAL :: cobs_gros_MAX_S = 3.0                     ! maximum of the gross off set check for salt
-  REAL :: cobs_gros_sdv_T = 5.0                     ! MAX number of SDV range for the gross check for temp
-  REAL :: cobs_gros_sdv_S = 5.0                     ! MAX number of SDV range for the gross check for salt
+  REAL :: ocean_searchdist = 200e3
+  REAL :: temp_sd = 5.0                ! MAX number of SDV range for the gross check for temp
+  REAL :: temp_offset_min = 2.0        ! minimum of the gross off set check for temp
+  REAL :: temp_offset_max = 20.0       ! maximum of the gross off set check for temp
+  LOGICAL :: temp_bad_if_s_bad = .FALSE.
+  REAL :: salt_sd = 5.0                ! MAX number of SDV range for the gross check for salt
+  REAL :: salt_offset_min = 0.3        ! minimum of the gross off set check for salt
+  REAL :: salt_offset_max = 3.0        ! maximum of the gross off set check for salt
+  LOGICAL :: salt_bad_if_t_bad = .FALSE.
 
   ! T/S climatology file
-  INTEGER :: cobs_nx                                ! x- dimension of cobs
-  INTEGER :: cobs_ny                                ! y- dimension of cobs
-  INTEGER :: cobs_nz                                ! z- dimension of cobs, layer
-  INTEGER :: cobs_nt                                ! t- dimension of cobs, months
+  INTEGER :: cobs_nx                         ! x- dimension of cobs
+  INTEGER :: cobs_ny                         ! y- dimension of cobs
+  INTEGER :: cobs_nz                         ! z- dimension of cobs, layer
+  INTEGER :: cobs_nt                         ! t- dimension of cobs, months
   REAL, ALLOCATABLE :: cobs_lon(:)           ! longitudes (degrees)
   REAL, ALLOCATABLE :: cobs_lat(:)           ! latitudes (degrees)
   REAL, ALLOCATABLE :: cobs_dep(:)           ! depths (meters)
@@ -95,52 +97,52 @@ CONTAINS
     INTEGER :: i, j, k, x, y
     INTEGER :: i4(4)
 
-    CHARACTER(len=:), ALLOCATABLE :: cobs_TS_file
-    CHARACTER(len=:), ALLOCATABLE :: cobs_lon_var
-    CHARACTER(len=:), ALLOCATABLE :: cobs_lat_var
-    CHARACTER(len=:), ALLOCATABLE :: cobs_dep_var
-    CHARACTER(len=:), ALLOCATABLE :: cobs_temp_var
-    CHARACTER(len=:), ALLOCATABLE :: cobs_salt_var
-    CHARACTER(len=:), ALLOCATABLE :: cobs_toff_var
-    CHARACTER(len=:), ALLOCATABLE :: cobs_soff_var
+    CHARACTER(len=:), ALLOCATABLE :: clim_file
+    CHARACTER(len=:), ALLOCATABLE :: clim_file_lon
+    CHARACTER(len=:), ALLOCATABLE :: clim_file_lat
+    CHARACTER(len=:), ALLOCATABLE :: clim_file_depth
+    CHARACTER(len=:), ALLOCATABLE :: clim_file_temp
+    CHARACTER(len=:), ALLOCATABLE :: clim_file_salt
+    CHARACTER(len=:), ALLOCATABLE :: clim_file_temp_sd
+    CHARACTER(len=:), ALLOCATABLE :: clim_file_salt_sd
 
     REAL, ALLOCATABLE :: kd_tree_lons(:), kd_tree_lats(:)
 
     NAMELIST /qc_clim/ &
-         cobs_gros_sdv_T, cobs_gros_MIN_T, cobs_gros_MAX_T, &
-         cobs_gros_sdv_S, cobs_gros_MIN_S, cobs_gros_MAX_S, &
-         cobs_TS_file, cobs_lon_var, cobs_lat_var, cobs_dep_var, &
-         clim_searchdist, &
-         cobs_temp_var, cobs_salt_var, cobs_toff_var, cobs_soff_var
+         clim_file, clim_file_lon, clim_file_lat, clim_file_depth, &
+         clim_file_temp, clim_file_temp_sd, clim_file_salt, clim_file_salt_sd, &
+         ocean_searchdist, &
+         temp_sd, temp_offset_min, temp_offset_max, temp_bad_if_s_bad, &
+         salt_sd, salt_offset_min, salt_offset_max, salt_bad_if_t_bad
 
     ! read namelist parameters
-    ALLOCATE(CHARACTER(len=1024) :: cobs_TS_file)
-    ALLOCATE(CHARACTER(len=1024) :: cobs_lon_var)
-    ALLOCATE(CHARACTER(len=1024) :: cobs_lat_var)
-    ALLOCATE(CHARACTER(len=1024) :: cobs_dep_var)
-    ALLOCATE(CHARACTER(len=1024) :: cobs_temp_var)
-    ALLOCATE(CHARACTER(len=1024) :: cobs_salt_var)
-    ALLOCATE(CHARACTER(len=1024) :: cobs_toff_var)
-    ALLOCATE(CHARACTER(len=1024) :: cobs_soff_var)
+    clim_file = REPEAT(' ', 1024)
+    clim_file_lon = REPEAT(' ', 1024)
+    clim_file_lat = REPEAT(' ', 1024)
+    clim_file_depth = REPEAT(' ', 1024)
+    clim_file_temp = REPEAT(' ', 1024)
+    clim_file_salt = REPEAT(' ', 1024)
+    clim_file_temp_sd = REPEAT(' ', 1024)
+    clim_file_salt_sd = REPEAT(' ', 1024)
     READ(nmlfile, qc_clim)
-    cobs_TS_file = TRIM(cobs_TS_file)
-    cobs_lon_var = TRIM(cobs_lon_var)
-    cobs_lat_var = TRIM(cobs_lat_var)
-    cobs_dep_var = TRIM(cobs_dep_var)
-    cobs_temp_var = TRIM(cobs_temp_var)
-    cobs_salt_var = TRIM(cobs_salt_var)
-    cobs_toff_var = TRIM(cobs_toff_var)
-    cobs_soff_var = TRIM(cobs_soff_var)
+    clim_file = TRIM(clim_file)
+    clim_file_lon = TRIM(clim_file_lon)
+    clim_file_lat = TRIM(clim_file_lat)
+    clim_file_depth = TRIM(clim_file_depth)
+    clim_file_temp = TRIM(clim_file_temp)
+    clim_file_salt = TRIM(clim_file_salt)
+    clim_file_temp_sd = TRIM(clim_file_temp_sd)
+    clim_file_salt_sd = TRIM(clim_file_salt_sd)
     PRINT qc_clim
 
 
-    !---- load WOA13 clomatologies of T and S (analysis)
+    !---- load clomatologies of T and S (analysis)
     ! TODO add the option for using 2D lat/lon grids?
     ! --------------------------------------------------------------------------
-    CALL check(nf90_open(cobs_TS_file, nf90_nowrite, ncid))
+    CALL check(nf90_open(clim_file, nf90_nowrite, ncid))
 
     !---- longitudes
-    CALL check(nf90_inq_varid(ncid, cobs_lon_var, vid))
+    CALL check(nf90_inq_varid(ncid, clim_file_lon, vid))
     CALL check(nf90_inquire_variable(ncid, vid, ndims=i))
     IF(i/=1) THEN
        PRINT *, "ERROR: climatology file must have a 1D longitude"
@@ -152,7 +154,7 @@ CONTAINS
     CALL check(nf90_get_var(ncid, vid, cobs_lon))
 
     !---- latitudes
-    CALL check(nf90_inq_varid(ncid, cobs_lat_var, vid))
+    CALL check(nf90_inq_varid(ncid, clim_file_lat, vid))
     CALL check(nf90_inquire_variable(ncid, vid, ndims=i))
     IF(i/=1) THEN
        PRINT *, "ERROR: climatology file must have a 1D latitude"
@@ -164,7 +166,7 @@ CONTAINS
     CALL check(nf90_get_var(ncid, vid, cobs_lat))
 
     !---- depths
-    CALL check(nf90_inq_varid(ncid, cobs_dep_var, vid))
+    CALL check(nf90_inq_varid(ncid, clim_file_depth, vid))
     CALL check(nf90_inquire_variable(ncid, vid, ndims=i))
     IF(i/=1) THEN
        PRINT *, "ERROR: climatology file must have a 1D depth"
@@ -176,7 +178,7 @@ CONTAINS
     CALL check(nf90_get_var(ncid, vid, cobs_dep))
 
     !---- temp (and a check to make sure fields are monthly clim, ie 12 of them)
-    CALL check(nf90_inq_varid(ncid, cobs_temp_var, vid))
+    CALL check(nf90_inq_varid(ncid, clim_file_temp, vid))
     CALL check(nf90_inquire_variable(ncid, vid, ndims=i))
     IF(i/=4) THEN
        PRINT *, "ERROR: a monthly climatology is required"
@@ -194,17 +196,17 @@ CONTAINS
 
     !---- salt
     ALLOCATE(cobs_salt(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
-    CALL check(nf90_inq_varid(ncid, cobs_salt_var, vid))
+    CALL check(nf90_inq_varid(ncid, clim_file_salt, vid))
     CALL check(nf90_get_var(ncid, vid, cobs_salt))
 
     !---- toff
     ALLOCATE(cobs_toff(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
-    CALL check(nf90_inq_varid(ncid, cobs_toff_var, vid))
+    CALL check(nf90_inq_varid(ncid, clim_file_temp_sd, vid))
     CALL check(nf90_get_var(ncid, vid, cobs_toff))
 
     !---- soff
     ALLOCATE(cobs_soff(cobs_nx,cobs_ny,cobs_nz,cobs_nt))
-    CALL check(nf90_inq_varid(ncid, cobs_soff_var, vid))
+    CALL check(nf90_inq_varid(ncid, clim_file_salt_sd, vid))
     CALL check(nf90_get_var(ncid, vid, cobs_soff))
 
     !----
@@ -265,11 +267,13 @@ CONTAINS
     TYPE(profile) :: prof2
 
     INTEGER :: bad_outbound, bad_noprof
-    INTEGER :: bad_gross_T, bad_noprof_off_T
-    INTEGER :: bad_gross_S, bad_noprof_off_S
+    INTEGER :: bad_gross_TS
+    INTEGER :: bad_gross_T, bad_noprof_off_T, bad_gross_T_from_S
+    INTEGER :: bad_gross_S, bad_noprof_off_S, bad_gross_S_from_T
     INTEGER :: tag_outbound, tag_noprof
-    INTEGER :: tag_gross_T, tag_noprof_off_T
-    INTEGER :: tag_gross_S, tag_noprof_off_S
+    INTEGER :: tag_gross_TS
+    INTEGER :: tag_gross_T, tag_noprof_off_T, tag_gross_T_from_S
+    INTEGER :: tag_gross_S, tag_noprof_off_S, tag_gross_S_from_T
 
     INTEGER :: x, y, z
     REAL :: cdif, coff
@@ -282,22 +286,28 @@ CONTAINS
     REAL :: r_dist(1)
 
     TYPE(cspline) :: cobs_tspl, cobs_tspl_off, cobs_sspl, cobs_sspl_off
+    INTEGER :: remove_temp, remove_salt
 
     ! initialize bad obs counts
     bad_outbound = 0
     bad_noprof = 0
+    bad_gross_TS = 0
     bad_gross_T = 0
     bad_noprof_off_T = 0
+    bad_gross_T_from_S =0
     bad_gross_S = 0
     bad_noprof_off_S = 0
+    bad_gross_S_from_T =0
 
-    tag_outbound     = self%err_base + 1
-    tag_noprof       = self%err_base + 2
-    tag_gross_T      = self%err_base + 3
-    tag_noprof_off_T = self%err_base + 4
-    tag_gross_S      = self%err_base + 5
-    tag_noprof_off_S = self%err_base + 6
-
+    tag_outbound       = self%err_base + 1
+    tag_noprof         = self%err_base + 2
+    tag_gross_TS       = self%err_base + 3
+    tag_noprof_off_T   = self%err_base + 4
+    tag_gross_T        = self%err_base + 5
+    tag_gross_T_from_S = self%err_base + 6
+    tag_gross_S        = self%err_base + 7
+    tag_noprof_off_S   = self%err_base + 8
+    tag_gross_S_from_T = self%err_base + 9
 
     !--- main loop
     global : DO i = 1, obs_in%SIZE()
@@ -322,7 +332,7 @@ CONTAINS
        y = kd_tree_y(r_points(1))
 
        ! If no good closest point found
-       IF (r_dist(1) > clim_searchdist) THEN
+       IF (r_dist(1) > ocean_searchdist) THEN
           bad_outbound = bad_outbound + 1
           prof%tag = tag_outbound
           CALL obs_rej%push_back(prof)
@@ -332,6 +342,8 @@ CONTAINS
 
        ! otherwise a good location was found, continue...
 
+       remove_temp = 0 ! flags indicating if temp or salt were found bad
+       remove_salt = 0
 
        !---------------------------------------------------------------------
        ! temperature check
@@ -366,11 +378,7 @@ CONTAINS
           ENDDO
           !---
           IF (btmb <= 1) THEN
-             bad_noprof_off_T = bad_noprof_off_T + 1
-             prof2 = prof%copy('T')
-             prof2%tag = tag_noprof_off_T
-             CALL prof%clear('T')
-             CALL obs_rej%push_back(prof2)
+             remove_temp = tag_noprof_off_T
              EXIT temp_if
           ENDIF
 
@@ -379,33 +387,24 @@ CONTAINS
           cobs_tinp_off = cobs_tspl_off%interp(prof%depth, check=.TRUE.)
 
           !==> gross check,
-          vtemp : DO k = 1, SIZE(prof%temp)
+          DO k = 1, SIZE(prof%temp)
              ! ignore this level if there is no defined temperature
              IF (prof%temp(k) == PROF_UNDEF) CYCLE
 
              cdif = ABS(prof%temp(k)-cobs_tinp(k))
-             coff = MAX(cobs_gros_MIN_T, &
-                  MIN(cobs_gros_MAX_T,cobs_gros_sdv_T*cobs_tinp_off(k)))
+             coff = MAX(temp_offset_min, &
+                  MIN(temp_offset_max,temp_sd*cobs_tinp_off(k)))
 
              IF (cdif > coff) THEN
                 ! level failing the gross check
                 ! TODO, add option to remove level, instead of flagging
                 ! entire variable bad
-                ! TODO, need to copy the profile before adding it to the
-                ! reject vector, otherwise the actual profile values will
-                ! not be retained (prof holds pointers to object, so the
-                ! contents of prof are currently being modified after
-                ! pushed back), same applies to salinity below.
-                bad_gross_T = bad_gross_T + 1
-                prof2 = prof%copy('T')
-                prof2%tag = tag_gross_T
-                CALL prof%clear('T')
-                CALL obs_rej%push_back(prof2)
-                EXIT vtemp
+                remove_temp = tag_gross_T
+                EXIT temp_if
              ENDIF
-          ENDDO vtemp ! k = 1, SIZE(prof%depth)
+          ENDDO
 
-       END IF temp_if !(btma > 1)
+       END IF temp_if
 
 
        !---------------------------------------------------------------------
@@ -422,11 +421,7 @@ CONTAINS
           ENDDO
           !---
           IF (btmd <= 1) THEN
-             bad_noprof_off_S = bad_noprof_off_S + 1
-             prof2 = prof%copy('S')
-             CALL prof%clear('S')
-             prof2%tag = tag_noprof_off_S
-             CALL obs_rej%push_back(prof2)
+             remove_salt = tag_noprof_off_S
              EXIT salt_if
           ENDIF
 
@@ -435,31 +430,74 @@ CONTAINS
           cobs_sinp_off = cobs_sspl_off%interp(prof%depth, check=.TRUE.)
 
           !==> gross check,
-          vsalt : DO k = 1, SIZE(prof%salt)
+          DO k = 1, SIZE(prof%salt)
 
              ! ignore this level if there is no defined salinity
              IF (prof%salt(k) == PROF_UNDEF) CYCLE
 
              cdif = ABS(prof%salt(k)-cobs_sinp(k))
-             coff = MAX(cobs_gros_MIN_S, &
-                  MIN(cobs_gros_MAX_S,cobs_gros_sdv_S*cobs_sinp_off(k)))
+             coff = MAX(salt_offset_min, &
+                  MIN(salt_offset_max,salt_sd*cobs_sinp_off(k)))
 
              IF (cdif > coff) THEN
                 ! level failing the gross check
                 ! TODO, add option to remove level, instead of flagging
                 ! entire variable bad
-                bad_gross_S = bad_gross_S + 1
-                prof2 = prof%copy('S')
-                prof2%tag = tag_gross_S
-                CALL prof%clear('S')
-                CALL obs_rej%push_back(prof2)
-                EXIT vsalt
-             ENDIF ! (cdif > coff)
+                remove_salt = tag_gross_S
+                EXIT salt_if
+             ENDIF
 
-          ENDDO vsalt ! k = 1, SIZE(prof%depth)
-       END IF salt_if !(btmc > 1)
+          ENDDO
+       END IF salt_if
 
-       ! if both T and S are empty, abandon this profile
+       ! convoluted logic to determine if T and/or S profile stays or go
+       IF ( remove_salt == tag_gross_S .AND. remove_temp == tag_gross_T) THEN
+          ! both T and S failed clim check
+          prof%tag = tag_gross_TS
+          bad_gross_TS = bad_gross_TS + 1
+          CALL obs_rej%push_back(prof)
+          CYCLE global
+       ELSE
+          IF ( remove_salt > 0) THEN
+             ! S failed the clim check
+             prof2 = prof%copy('S')
+             prof2%tag = remove_salt
+             CALL obs_rej%push_back(prof2)
+             CALL prof%clear('S')
+             IF (remove_salt == tag_noprof_off_S) &
+                  bad_noprof_off_S = bad_noprof_off_S + 1
+             IF (remove_salt == tag_gross_S) &
+                  bad_gross_S = bad_gross_S + 1
+          ELSE IF (remove_temp > 0 .AND. salt_bad_if_t_bad .AND. SIZE(prof%salt)>0) THEN
+             ! S fails only because T failed
+             bad_gross_S_from_T = bad_gross_S_from_T + 1
+             prof2 = prof%copy('S')
+             prof2%tag = tag_gross_S_from_T
+             CALL obs_rej%push_back(prof2)
+             CALL prof%clear('S')
+          END IF
+
+          IF ( remove_temp > 0) THEN
+             ! T failed the clim check
+             prof2 = prof%copy('T')
+             prof2%tag = remove_temp
+             CALL obs_rej%push_back(prof2)
+             CALL prof%clear('T')
+             IF (remove_temp == tag_noprof_off_T) &
+                  bad_noprof_off_T = bad_noprof_off_T + 1
+             IF (remove_temp == tag_gross_T)&
+                  bad_gross_T = bad_gross_T + 1
+          ELSE IF (remove_salt > 0 .AND. temp_bad_if_s_bad .AND. SIZE(prof%temp)>0) THEN
+             ! T fails only because S failed
+             bad_gross_T_from_S = bad_gross_T_from_S + 1
+             prof2 = prof%copy('T')
+             prof2%tag = tag_gross_T_from_S
+             CALL obs_rej%push_back(prof2)
+             CALL prof%clear('T')
+          END IF
+       END IF
+
+       !if both T and S are empty, abandon this profile
        IF (SIZE(prof%temp) == 0 .AND. SIZE(prof%salt) == 0) CYCLE
 
        ! IF we get to here, the profile is good
@@ -470,17 +508,24 @@ CONTAINS
        IF(ALLOCATED(cobs_sinp)) DEALLOCATE(cobs_sinp)
        IF(ALLOCATED(cobs_sinp_off)) DEALLOCATE(cobs_sinp_off)
 
-    END DO global ! i = 1, obs_in%SIZE()
+    END DO global
 
 
     ! print out stats if any profiles were removed
     ! NOTE: these should be printed in the order that they were checked
     CALL print_rej_count(bad_outbound, 'profiles removed because no nearby ocean points in climatology file', tag_outbound)
     CALL print_rej_count(bad_noprof, 'profiles removed because climatology file too shallow', tag_noprof)
+    CALL print_rej_count(bad_gross_TS, 'T/S profiles removed because both T and S fail clim  check', tag_gross_TS)
+
     CALL print_rej_count(bad_noprof_off_T, 'T profiles removed because T_off too shallow in climatology file', tag_noprof_off_T)
-    CALL print_rej_count(bad_gross_T, 'T profiles removed for T gross check', tag_gross_T)
+    CALL print_rej_count(bad_gross_T, 'T profiles removed for failed climatology check', tag_gross_T)
+
     CALL print_rej_count(bad_noprof_off_S, 'S profiles removed because S_off too shallow in climatology file', tag_noprof_off_S)
-    CALL print_rej_count(bad_gross_S, 'S profiles removed for S gross check', tag_gross_S)
+    CALL print_rej_count(bad_gross_S, 'S profiles removed for failed climatology check', tag_gross_S)
+
+    CALL print_rej_count(bad_gross_T_from_S, 'T profiles removed for failed S profile climatology check', tag_gross_T_from_S)
+    CALL print_rej_count(bad_gross_S_from_T, 'S profiles removed for failed T profile climatology check', tag_gross_S_from_T)
+
 
     !---
   END SUBROUTINE qc_step_check

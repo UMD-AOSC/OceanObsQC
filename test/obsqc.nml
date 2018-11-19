@@ -3,13 +3,20 @@
 !===============================================================================
 
 &obsqc_nml
-  obs_reader_type="WOD"  ! options are: BUFR, WOD
-  obs_writer_type="NC"    ! options are: NC
-  !qcsteps="qc_gross qc_duplicate qc_depths qc_global qc_density"
-  qcsteps="qc_duplicate qc_depths qc_gross qc_clim qc_depths qc_density qc_time_avg"
+  !! The name of the observation file reader plugin. Choices are currently:
+  !!  1) "BUFR" for BUFR binary files
+  !!  2) "WOD" for text based World Ocean Database files
+  obs_reader_type="WOD"
 
-  ! only keep profiles between these dates (YYYYMMDD)
-  ! if commented out, all dates are kept
+  !! The name of the observation file writer plugin. Only current choice is "NC"
+  obs_writer_type="NC"
+
+  !! A space-separated list of the qc steps to perform, in the order to perform
+  !! them. QC steps can be duplicated, if desired
+  qcsteps="qc_duplicate qc_depths qc_gross qc_clim qc_density qc_time_avg"
+
+  !! only keep profiles between these dates (YYYYMMDD). If commented out,
+  !! all dates are used.
 !  read_start_date = 20030101
 !  read_end_date   = 20030101
 /
@@ -17,26 +24,37 @@
 
 
 !===============================================================================
-! Obs reader / writer configuration
+! Observation reader / writer configuration
 !===============================================================================
 
+
 &obs_reader_wod
- use_bad_qc_pfl=F
- use_bad_qc_lvl=F
+  !! World Ocean Database text file reader
+
+  !! If True, profiles are kept even if the WOD file indicates they may be bad
+  use_bad_qc_pfl=F
+
+  !! If True, individual depth levels are kept even if the WOD file indicates
+  !! that either the depth or the value might be bad
+  use_bad_qc_lvl=F
 /
+
 
 
 &obs_reader_bufr
+  !! BUFR file reader (currently no configuration options)
 /
+
 
 
 !===============================================================================
 ! QC step configurations
 !===============================================================================
 
+
 &qc_depths
-  ! Check for proper monotonically increasing depths, with sufficient levels.
-  ! A profile is removed if any of the following checks fail.
+  !! Check for proper monotonically increasing depths, with sufficient levels.
+  !! A profile is removed if any of the following checks fail.
 
   check_nonmono=T   ! check to ensure depth values increase monotonically
 
@@ -50,52 +68,79 @@
 /
 
 
+
 &qc_gross
-  remove_zero_latlon = T
-  t_max = 33.0
-  t_min = -2.0
-  s_max = 43.0
-  s_min = 0.1
+  !! Check for gross errors on the profile date, time, position, and values.
+  !! If any of the checks fail, the entire profile is removed.
+
+  remove_zero_latlon = T    ! remove if lat==0 and lon==0
+  t_max = 33.0              ! maximum temperature value (C)
+  t_min = -4.0              ! minimum temperature value (C)
+  s_max = 43.0              ! maximum salinity value (PSU)
+  s_min = 0.1               ! minimum salinity value (PSU)
 /
+
 
 
 &qc_clim
+  !! check temperature and salinity profile against a pre-computed mean and
+  !! standard deviation climatology file.
 
- clim_searchdist = 150.0e3
- cobs_gros_sdv_T = 5.0
- cobs_gros_min_T = 3.0
- cobs_gros_max_T = 20.0
- cobs_gros_sdv_S = 5.0
- cobs_gros_min_S = 2.0
- cobs_gros_max_S = 7.0
- cobs_TS_file="WOA18_TS.nc"
- cobs_lon_var="lon"
- cobs_lat_var="lat"
- cobs_dep_var="depth"
- cobs_temp_var="temp"
- cobs_salt_var="salt"
- cobs_toff_var="tsdv"
- cobs_soff_var="ssdv"
+  clim_file="WOA18_TS.nc"    ! name of climatology netcdf file
+  clim_file_lon="lon"        ! name of 1D longitude variable in clim file
+  clim_file_lat="lat"        ! name of 1D latitude variable in clim file
+  clim_file_depth="depth"    ! name of 1D depth variable in clim file
+  clim_file_temp="temp"      ! name of monthly temperature mean in clim file
+  clim_file_temp_sd="tsdv"   ! name of monthly temperature stddev in clim file
+  clim_file_salt="salt"      ! name of monthly salinity mean in clim file
+  clim_file_salt_sd="ssdv"   ! name of monthly salinity stddev in clim file
+
+  ocean_searchdist=150.0e3   ! maximum distance (m) to search for a matching
+                             ! ocean gridpoint in the clim file.
+
+  temp_sd           = 5.0    ! number of standard deviations from monthly clim allowable
+  temp_offset_min   = 3.0    ! minimum T offset allowed (C)
+  temp_offset_max   = 12.0   ! maximum T offset allowed (C)
+  temp_bad_if_s_bad = F      ! an otherwise good T profile is bad if S profile fails
+
+  salt_sd           = 5.0    ! number of standard deviations from monthly clim allowable
+  salt_offset_min   = 2.0    ! minimum S offset allowed (PSU)
+  salt_offset_max   = 7.0    ! maximum S offset allowed (PSU)
+  salt_bad_if_t_bad = T      ! an otherwise good S profile is bad if T profile fails
 /
+
 
 
 &qc_profile
- ! check for vertical structures
+  !! check for profile structure for spikes, excessive gradient, and constants
+  !! NOTE: this is not currently working!
 
- prf_trlatN=60.0
- prf_trlatS=-60.0
- prf_trTmin=0.05
- prf_trSmin=0.005
- prf_T1spmax=0.5
- prf_S1spmax=0.1
- prf_Tbspmax=0.5
- prf_Sbspmax=0.1
- prf_Trsmx=1.75
- prf_Srsmx=1.75
+  prf_trlatN=60.0
+  prf_trlatS=-60.0
+  prf_trTmin=0.05
+  prf_trSmin=0.005
+  prf_T1spmax=0.5
+  prf_S1spmax=0.1
+  prf_Tbspmax=0.5
+  prf_Sbspmax=0.1
+  prf_Trsmx=1.75
+  prf_Srsmx=1.75
 /
 
+
+
 &qc_density
-  ! If a profile has both salinity and temperature, check to make sure that
-  ! there is not a density inversion in subsequent levels
+  !! If a profile has both salinity and temperature, check to make sure that
+  !! there is not a density inversion in subsequent levels
+
   dens_inv_tol = 0.1 ! tolerance when detecting density inversions (kg/m^3)
+/
+
+
+
+&qc_time_avg
+  !! take the average of profiles from the same platform the same day and
+  !! within 'max_dist' meters of each other
+
+  max_dist=50e3  ! max distance (meters) between profiles to be averaged
 /

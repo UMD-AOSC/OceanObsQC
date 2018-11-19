@@ -24,7 +24,9 @@ MODULE qc_time_avg_mod
   ! parameters to be read in from the namelist
   REAL :: max_dist = 50e3 !< max horizontal distance for averaging to occur (meters)
 
+
   REAL :: time_bin = 24    !< size of time bin (hours). TODO: fix this
+                           !! to allow arbitrary time bin sizes
 
 CONTAINS
 
@@ -62,9 +64,9 @@ CONTAINS
     CLASS(qc_time_avg) :: self
     INTEGER, INTENT(in) :: nmlfile
 
-    !NAMELIST /qc_time_avg/ var1, var2
-    !READ(nmlfile, qc_time_avg)
-    !PRINT qc_time_avg
+    NAMELIST /qc_time_avg/ max_dist
+    READ(nmlfile, qc_time_avg)
+    PRINT qc_time_avg
 
   END SUBROUTINE qc_step_init
   !=============================================================================
@@ -200,7 +202,7 @@ CONTAINS
        end do
     end do
 
-    
+
     ! get the final list of depths from the set
     ! TODO possibily thin the set, if obs aren't using standard levels?
     allocate(depths(depths_set%size()))
@@ -239,11 +241,11 @@ CONTAINS
              IF (prof_ptr%salt(j) /= PROF_UNDEF) &
                   call stats_s(idx)%add(prof_ptr%salt(j))
           END IF
-          
+
        end do
     end do
 
-    
+
     ! TODO: rerun, not adding any profile levels that fall outside desired variance
     ! TODO: remove levels that have insufficent number of obs compared with other levels
     ! TODO: remove levels that have stddev too large
@@ -263,7 +265,7 @@ CONTAINS
     prof%temp=PROF_UNDEF
     do i=1,size(depths)
        IF(stats_t(i)%count > 0) prof%temp(i) = stats_t(i)%mean()
-       IF(stats_s(i)%count > 0) prof%salt(i) = stats_s(i)%mean()       
+       IF(stats_s(i)%count > 0) prof%salt(i) = stats_s(i)%mean()
     end do
 
     ! remove salt/ temp profiles that are empty
@@ -279,7 +281,7 @@ CONTAINS
   !=============================================================================
 
 
-  
+
   PURE FUNCTION findclosest(val, list) RESULT(res)
     REAL, INTENT(IN) :: val
     REAL, INTENT(IN) :: list(:)
@@ -287,7 +289,7 @@ CONTAINS
 
     REAL :: dist, dist2
     INTEGER :: i
-    
+
     res = -1
     dist = 1e36
 
@@ -298,11 +300,11 @@ CONTAINS
        ELSE
           res = i-1
           return
-       END IF       
+       END IF
     end DO
-    res = size(list)    
+    res = size(list)
   END FUNCTION FINDCLOSEST
-  
+
 
 
   !=============================================================================
