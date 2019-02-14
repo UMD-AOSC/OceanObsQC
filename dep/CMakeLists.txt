@@ -9,5 +9,3 @@ set(GFTL_INCLUDE
 #TODO, need to do this properly so that mod files are generated in their own subdirectory
 include(GSW-Fortran.cmake)
 set(GSW_INCLUDES ${GSW_INCLUDES} PARENT_SCOPE)
-
-#add_subdirectory(bufrlib)

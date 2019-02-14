@@ -100,9 +100,10 @@ CONTAINS
     REAL :: clat, slat, hz_dist, t_dist
 
     INTEGER :: i,j
-    INTEGER :: rm_count
+    INTEGER :: rm_count_t, rm_count_s
 
-    rm_count = 0
+    rm_count_t = 0
+    rm_count_s = 0
 
     ALLOCATE(prof_valid(obs_in%SIZE()))
     prof_valid = .TRUE.
@@ -140,12 +141,14 @@ CONTAINS
           t_dist = deltaDates(prof1%date, prof2%date)*24 - 12 + prof2%hour
 
           IF (hz_dist < max_dist .AND. ABS(t_dist) <= 12) THEN
+             IF(SIZE(prof2%temp) > 0) rm_count_t = rm_count_t + 1
+             IF(SIZE(prof2%salt) > 0) rm_count_s = rm_count_s + 1
              prof_avg_num = prof_avg_num + 1
              prof_avg(prof_avg_num) = j
           END IF
        END DO inner
 
-       rm_count = rm_count + prof_avg_num - 1
+!       rm_count = rm_count + prof_avg_num - 1
        IF(prof_avg_num > 1) THEN
           ! mark all the profiles listed so that they aren't used again
           DO j=1,prof_avg_num
@@ -161,7 +164,8 @@ CONTAINS
     END DO outer
 
     DEALLOCATE(prof_valid, prof_avg)
-    CALL print_rej_count(rm_count, 'profiles removed for temporal/hz averaging',0)
+    CALL print_rej_count(rm_count_t, 'T profiles removed for temporal/hz averaging',0)
+    CALL print_rej_count(rm_count_s, 'S profiles removed for temporal/hz averaging',0)
 
   END SUBROUTINE qc_step_check
   !=============================================================================

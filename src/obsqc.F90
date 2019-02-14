@@ -67,14 +67,14 @@ PROGRAM obsqc
 
   ! get the command line arguments for input output filenames
   i = command_argument_COUNT()
-  IF (i /= 2) THEN
-     PRINT *, 'ERROR: call with "obsqc <inputfile> <outputfile>"'
+  IF (i /= 3) THEN
+     PRINT *, 'ERROR: call with "obsqc <inputfile> <outputfile> <rej_outputfile>"'
      STOP 1
   END IF
   CALL get_command_ARGUMENT(1, VALUE=in_filename)
   CALL get_command_ARGUMENT(2, VALUE=out_filename)
+  CALL get_command_argument(3, VALUE=rej_filename)
 
-  rej_filename=TRIM('rej_') // TRIM(out_filename)
 
   ! open the namelist file
   ! grab the main parameters we need

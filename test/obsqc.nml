@@ -63,7 +63,7 @@
 
   min_levels=3      ! minimum number of vertical levels required
   max_depth=6000.0  ! maximum depth allowed (meters)
-  max_start=36.0    ! first level must be above this depth (meters)
+  max_start=-1      ! first level must be above this depth (meters)
   max_gap=500.0     ! no vertical gaps larger than this allowed (meters)
 /
 
@@ -142,5 +142,5 @@
   !! take the average of profiles from the same platform the same day and
   !! within 'max_dist' meters of each other
 
-  max_dist=50e3  ! max distance (meters) between profiles to be averaged
+  max_dist=25e3  ! max distance (meters) between profiles to be averaged
 /
